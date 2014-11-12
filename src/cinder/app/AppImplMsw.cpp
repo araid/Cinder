@@ -95,8 +95,8 @@ Buffer AppImplMsw::loadResource( int id, const std::string &type )
 	size_t dataSize;
 
 	wchar_t unicodeType[1024]; 
-	wsprintfW( unicodeType, L"%S", type.c_str() );
-	resInfoHandle = ::FindResource( NULL, MAKEINTRESOURCE(id), unicodeType );
+	wsprintfW( unicodeType, L"%S", type.c_str() );    
+	resInfoHandle = ::FindResourceEx( NULL, unicodeType, MAKEINTRESOURCE( id ), ::GetUserDefaultLangID() );
 	if( resInfoHandle == NULL ) {
 		throw ResourceLoadExc( id, type );
 	}

@@ -109,7 +109,7 @@ Buffer AppImplWinRT::loadResource( int id, const std::string &type )
 
 	wchar_t unicodeType[1024]; 
 	wsprintfW( unicodeType, L"%S", type.c_str() );
-	resInfoHandle = ::FindResource( NULL, MAKEINTRESOURCE(id), unicodeType );
+	resInfoHandle = ::FindResourceEx( NULL, unicodeType, MAKEINTRESOURCE( id ), ::GetUserDefaultLangID() );
 	if( resInfoHandle == NULL ) {
 		throw ResourceLoadExc( id, type );
 	}
