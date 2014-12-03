@@ -135,6 +135,7 @@ void LightsApp::setup()
 	SpotLightRef spot = dynamic_pointer_cast<SpotLight>( mLights.back() );
 	spot->setPosition( vec3( 0, 9, 0 ) );
 	spot->setDirection( vec3( 0, -1, 0 ) );
+	spot->pointAt( 50.0f * glm::normalize( vec3( 1, 0, 1 ) ) );
 
 	// The color describes the relative intensity of the light for each of the primary colors red, green and blue.
 	// If you want the light to be brighter, change its intensity rather than its color.
@@ -173,7 +174,7 @@ void LightsApp::setup()
 	// the intensity will be zero at full range. You can optionally supply a threshold, which is the intensity 
 	// at full range. Larger threshold values will yield a shorter range, but may produce visible artefacts.
 	// In general, it is best to use the default threshold and simply adjust your distance attenuation.
-	spot->calcRange();
+	//spot->calcRange();
 
 	// The modulation map can be animated using the modulation parameters translateX, translateY, rotateZ and scale.
 	// Each parameter is defined by an offset (or start value), a linear animation and an oscillating one, of which 
@@ -367,10 +368,14 @@ void LightsApp::keyDown( KeyEvent event )
 			spot->setHotspotRatio( spot->getSpotRatio() );
 		break;
 	case KeyEvent::KEY_d:
-		if( spot->getAttenuation().y > 0 )
+		if( spot->getAttenuation().y > 0 ) {
 			spot->setAttenuation( 0, 0 );
-		else
+			spot->setRange( 50 );
+		}
+		else {
 			spot->setAttenuation( 0, 0.04f );
+			spot->calcRange();
+		}
 		break;
 	}
 }

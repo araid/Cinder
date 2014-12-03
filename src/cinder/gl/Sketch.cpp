@@ -74,7 +74,7 @@ void Sketch::light( const Light& light )
 	{
 		const CapsuleLight& ref = static_cast<const CapsuleLight&>( light );
 		const vec3& position = ref.getPosition();
-		vec3 offset = 0.5f * ref.getLength() * ref.getAxis();
+		vec3 offset = 0.5f * ref.getAxis() * ref.getLength();
 		capsule( position - offset, position + offset, ref.getRange() );
 	}
 		break;
@@ -82,15 +82,16 @@ void Sketch::light( const Light& light )
 	{
 		const SpotLight& ref = static_cast<const SpotLight&>( light );
 		const vec3& position = ref.getPosition();
-		vec3 offset = ref.getRange() * ref.getDirection();
-		cone( position, offset + position, ref.getSpotRatio() );
+		float range = ref.getRange() * glm::inversesqrt( 1.0f + glm::pow( ref.getSpotRatio(), 2.0f ) );
+		cone( position, position + range * ref.getDirection(), ref.getSpotRatio() );
+		cap( position + range * ref.getDirection(), range * ref.getSpotRatio(), position );
 	}
 		break;
 	case Light::Wedge:
 	{
 		const WedgeLight& ref = static_cast<const WedgeLight&>( light );
 		const vec3& position = ref.getPosition();
-		wedge( position, ref.getRange() * ref.getDirection() + position, ref.getAxis() * ref.getLength(), ref.getSpotRatio() );
+		wedge( position, position + ref.getRange() * ref.getDirection(), ref.getAxis() * ref.getLength(), ref.getSpotRatio() );
 	}
 		break;
 	default:

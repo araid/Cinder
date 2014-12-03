@@ -116,7 +116,7 @@ public:
 
 	//! Draws a cone from \a apex (top) to \a base (bottom). The \a ratio is the diameter of the base divided by the height.
 	void cone( const vec3& apex, const vec3& base, float ratio )
-	{ implDrawCylinder( base, apex, ratio * distance( apex, base ), 0.0f ); }
+	{ implDrawCylinder( apex, base, 0.0f, ratio * glm::distance( apex, base ) ); }
 
 	//! Draws a wedge (a stretched cone), where \a apex, \a base and \a ratio define the cone shape, \a axis is the line along which the cone is stretched.
 	void wedge( const vec3& apex, const vec3& base, const vec3& axis, float ratio )
@@ -151,6 +151,10 @@ public:
 	//! Draws a hemisphere of the specified \a radius at \a center, around \a axis.
 	void hemisphere( const vec3& center, float radius, const vec3& axis )
 	{ implDrawHemisphere( center, radius, axis ); implDrawCircle( center, radius, axis ); }
+
+	//! Draws a hemisphere of the specified \a radius at \a center, where all points are exactly a fixed distance from \a reference.
+	void cap( const vec3& center, float radius, const vec3& reference )
+	{ implDrawCap( center, radius, reference ); }
 
 	//! Draws a cube of the specified \a size at \a center.
 	void cube( const vec3& center, const vec3& size )
@@ -345,7 +349,7 @@ private:
 		const float angle = toRadians( 360.0f / kSides );
 		const float height = distance( base, top );
 		const vec3 axis = normalize( top - base );
-		const quat orientation( vec3( 0, 0, 1 ), normalize( axis ) );
+		const quat orientation( vec3( 0, 0, 1 ), axis );
 
 		if( height > 0.0f ) {
 			for( int i = 0; i < kSides; ++i ) {
@@ -356,7 +360,7 @@ private:
 			}
 
 			for( int i = 0; i <= 4; ++i )
-				implDrawCircle( lerp( base, top, i * 0.25f ), lerp( radiusBase, radiusTop, i*0.25f ), axis );
+				implDrawCircle( lerp( base, top, i * 0.25f ), lerp( radiusBase, radiusTop, i * 0.25f ), axis );
 		}
 	}
 
@@ -367,7 +371,7 @@ private:
 		const float angle = toRadians( 180.0f / kSides );
 		const float height = distance( base, top );
 		const vec3 axis = normalize( top - base );
-		const quat orientation( vec3( 0, 0, 1 ), normalize( axis ) );
+		const quat orientation( vec3( 0, 0, 1 ), axis );
 
 		if( height > 0.0f ) {
 			for( int i = 0; i <= kSides; ++i ) {
@@ -410,6 +414,40 @@ private:
 		// note: the base circle is omitted, since most calling functions already include it
 		implDrawCircle( center + radius * math<float>::cos( kCurves * 1 / 3 * phi ) * normalize( axis ), radius * math<float>::sin( kCurves * 1 / 3 * phi ), axis );
 		implDrawCircle( center + radius * math<float>::cos( kCurves * 2 / 3 * phi ) * normalize( axis ), radius * math<float>::sin( kCurves * 2 / 3 * phi ), axis );
+	}
+
+	void implDrawCap( const vec3& center, float radius, const vec3& reference )
+	{
+		static const int kSides = 6;
+		static const int kCurves = 9;
+
+		const float height = glm::distance( center, reference );
+		const float distance = glm::sqrt( height * height + radius * radius );
+		const vec3 axis = glm::normalize( center - reference );
+		const quat orientation( vec3( 0, 0, 1 ), axis );
+
+		const float phi = toRadians( 90.0f / kCurves );
+		const float theta = toRadians( 360.0f / kSides );
+
+		for( int i = 0; i < kSides; ++i ) {
+			for( int j = 0; j < kCurves; ++j ) {
+				vec3 a;
+				a.x = math<float>::sin( j * phi ) * math<float>::sin( i * theta );
+				a.z = math<float>::cos( j * phi );
+				a.y = math<float>::sin( j * phi ) * math<float>::cos( i * theta );
+				a = center + orientation * ( radius * a );
+				a = reference + distance * glm::normalize( a - reference );
+
+				vec3 b;
+				b.x = math<float>::sin( ( j + 1 ) * phi ) * math<float>::sin( i * theta );
+				b.z = math<float>::cos( ( j + 1 ) * phi );
+				b.y = math<float>::sin( ( j + 1 ) * phi ) * math<float>::cos( i * theta );
+				b = center + orientation * ( radius * b );
+				b = reference + distance * glm::normalize( b - reference );
+
+				implDrawLine( a, b );
+			}
+		}
 	}
 
 	void implDrawSphere( const vec3& center, float radius )
