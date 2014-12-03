@@ -28,6 +28,7 @@
 #include "cinder/gl/Context.h"
 #include "cinder/AxisAlignedBox.h"
 #include "cinder/Camera.h"
+#include "cinder/Light.h"
 #include "cinder/Quaternion.h"
 #include "cinder/Utilities.h"
 
@@ -204,6 +205,11 @@ public:
 	//! Draws a rectangle at the specified \a center with the specified \a size in the XY-plane.
 	void rect( const vec3& center, const vec2& size )
 	{ implDrawRect( center, size ); }
+
+	//! Draws the light's bounds.
+	void light( const Light &light );
+	//! Draws the light's bounds.
+	void light( const LightRef &light );
 
 private:
 	void implDrawGrid( const vec3& center, const vec3& normal, size_t size, size_t step )

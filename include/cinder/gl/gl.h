@@ -69,11 +69,14 @@
 #include "cinder/AxisAlignedBox.h"
 #include "cinder/Exception.h"
 #include "cinder/Color.h"
-#include "cinder/Camera.h"
 #include "cinder/Matrix44.h"
 #include "cinder/GeomIo.h"
 #include "cinder/PolyLine.h"
 #include "cinder/Font.h"
+#include "cinder/Vector.h"
+#include "cinder/Matrix.h"
+#include "cinder/Quaternion.h"
+#include "cinder/Ray.h"
 
 #if ! defined( NDEBUG )
 	#define CI_CHECK_GL()	cinder::gl::checkError()
@@ -87,6 +90,8 @@ namespace cinder {
 	class Path2d;
 	class Shape2d;
 	class Font;
+	class Camera;
+	class SpotLight;
 }
 
 namespace cinder { namespace gl {
@@ -195,6 +200,8 @@ void disableStencilWrite();
 
 //! Sets the View and Projection matrices based on a Camera
 void setMatrices( const ci::Camera &cam );
+//! Sets the View and Projection matrices based on a SpotLight
+void setMatrices( const ci::SpotLight &light );
 void setModelMatrix( const ci::mat4 &m );
 void setViewMatrix( const ci::mat4 &m );
 void setProjectionMatrix( const ci::mat4 &m );

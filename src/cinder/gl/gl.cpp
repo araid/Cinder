@@ -16,6 +16,8 @@
 #include "cinder/Path2d.h"
 #include "cinder/Shape2d.h"
 #include "cinder/Log.h"
+#include "cinder/Light.h"
+#include "cinder/Camera.h"
 #include <vector>
 
 #if defined( CINDER_MSW )
@@ -320,6 +322,14 @@ void setMatrices( const ci::Camera& cam )
 	auto ctx = context();
 	ctx->getViewMatrixStack().back() = cam.getViewMatrix();
 	ctx->getProjectionMatrixStack().back() = cam.getProjectionMatrix();
+	ctx->getModelMatrixStack().back() = mat4();
+}
+
+void setMatrices( const ci::SpotLight& light )
+{
+	auto ctx = context();
+	ctx->getViewMatrixStack().back() = light.getViewMatrix();
+	ctx->getProjectionMatrixStack().back() = light.getProjectionMatrix();
 	ctx->getModelMatrixStack().back() = mat4();
 }
 

@@ -57,6 +57,52 @@ void Sketch::frustum( const Camera& cam )
 	implDrawLine( eye, nearBottomLeft );
 }
 
+void Sketch::light( const Light& light )
+{
+	gl::ScopedColor color( light.getColor() );
+
+	switch( light.getType() ) {
+	case Light::Directional:
+		break;
+	case Light::Point:
+	{
+		const PointLight& ref = static_cast<const PointLight&>( light );
+		sphere( ref.getPosition(), ref.getRange() );
+	}
+		break;
+	case Light::Capsule:
+	{
+		const CapsuleLight& ref = static_cast<const CapsuleLight&>( light );
+		const vec3& position = ref.getPosition();
+		vec3 offset = 0.5f * ref.getLength() * ref.getAxis();
+		capsule( position - offset, position + offset, ref.getRange() );
+	}
+		break;
+	case Light::Spot:
+	{
+		const SpotLight& ref = static_cast<const SpotLight&>( light );
+		const vec3& position = ref.getPosition();
+		vec3 offset = ref.getRange() * ref.getDirection();
+		cone( position, offset + position, ref.getSpotRatio() );
+	}
+		break;
+	case Light::Wedge:
+	{
+		const WedgeLight& ref = static_cast<const WedgeLight&>( light );
+		const vec3& position = ref.getPosition();
+		wedge( position, ref.getRange() * ref.getDirection() + position, ref.getAxis() * ref.getLength(), ref.getSpotRatio() );
+	}
+		break;
+	default:
+		break;
+	}
+}
+
+void Sketch::light( const LightRef& light )
+{
+
+}
+
 // Leaves mVAO bound
 void Sketch::setupBuffers()
 {
