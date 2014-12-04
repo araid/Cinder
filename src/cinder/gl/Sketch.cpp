@@ -81,17 +81,19 @@ void Sketch::light( const Light& light )
 	case Light::Spot:
 	{
 		const SpotLight& ref = static_cast<const SpotLight&>( light );
-		const vec3& position = ref.getPosition();
 		float range = ref.getRange() * glm::inversesqrt( 1.0f + glm::pow( ref.getSpotRatio(), 2.0f ) );
-		cone( position, position + range * ref.getDirection(), ref.getSpotRatio() );
-		cap( position + range * ref.getDirection(), range * ref.getSpotRatio(), position );
+		const vec3& position = ref.getPosition();
+		const vec3& lookat = position + range * ref.getDirection();
+		cone( position, lookat, ref.getSpotRatio() );
+		cap( lookat, range * ref.getSpotRatio(), position );
 	}
 		break;
 	case Light::Wedge:
 	{
 		const WedgeLight& ref = static_cast<const WedgeLight&>( light );
 		const vec3& position = ref.getPosition();
-		wedge( position, position + ref.getRange() * ref.getDirection(), ref.getAxis() * ref.getLength(), ref.getSpotRatio() );
+		float range = ref.getRange() * glm::inversesqrt( 1.0f + glm::pow( ref.getSpotRatio(), 2.0f ) );
+		wedge( position, position + range * ref.getDirection(), ref.getAxis() * ref.getLength(), ref.getSpotRatio() );
 	}
 		break;
 	default:

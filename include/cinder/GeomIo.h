@@ -642,6 +642,22 @@ class Twist : public Source {
 	float					mStartAngle, mEndAngle;
 };
 
+class FlipNormals : public Source {
+  public:
+	  FlipNormals( const geom::Source &source )
+		  : mSource( source )	  {	  }
+
+	  size_t	getNumVertices() const override { return mSource.getNumVertices(); }
+	  size_t	getNumIndices() const override { return mSource.getNumIndices(); }
+	  Primitive	getPrimitive() const override { return mSource.getPrimitive(); }
+	  uint8_t	getAttribDims( Attrib attr ) const override;
+	  AttribSet	getAvailableAttribs() const override;
+	  void		loadInto( Target *target, const AttribSet &requestedAttribs ) const override;
+
+protected:
+	const geom::Source&		mSource;
+};
+
 //! Converts any geom::Source to equivalent vertices connected by lines. Output primitive type is always geom::Primitive::LINES.
 class Lines : public Source {
   public:

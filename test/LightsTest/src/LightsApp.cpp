@@ -68,7 +68,7 @@ public:
 
 	void render( bool onlyShadowCasters = false );
 private:
-	gl::BatchRef           mFloor, mFloorShadow;
+	gl::BatchRef           mRoom, mRoomShadow;
 	gl::BatchRef           mObject, mObjectShadow;
 	gl::SketchRef          mSketch;
 	gl::GlslProgRef        mShader, mShaderShadow;
@@ -122,7 +122,8 @@ void LightsApp::setup()
 	}
 
 	// Create 3D objects.
-	mFloor = gl::Batch::create( geom::Plane().size( vec2( 100 ) ), mShader );
+	mRoom = gl::Batch::create( geom::FlipNormals( geom::Cube().size( vec3( 50 ) ) ), mShader );
+	mRoomShadow = gl::Batch::create( geom::FlipNormals( geom::Cube().size( vec3( 50 ) ) ), mShaderShadow );
 	mObject = gl::Batch::create( geom::Teapot().subdivisions( 60 ), mShader );
 	mObjectShadow = gl::Batch::create( geom::Teapot().subdivisions( 20 ), mShaderShadow );
 
@@ -161,8 +162,8 @@ void LightsApp::setup()
 	// and by increasing the range you actually would increase the intensity. However, we allow you to specify
 	// intensity and range separately for ease of use. Try to keep the range as small as possible,
 	// because this will increase shadow quality and performance.
-	spot->setRange( 50 );
-	spot->setIntensity( 1 );
+	spot->setRange( 100 );
+	spot->setIntensity( 2 );
 
 	// If you want to make sure that the intensity will be zero at the specified range and distance attenuation,
 	// you can use the 'calcIntensity' function to calculate it for you. You can optionally supply a threshold,
@@ -174,7 +175,7 @@ void LightsApp::setup()
 	// the intensity will be zero at full range. You can optionally supply a threshold, which is the intensity 
 	// at full range. Larger threshold values will yield a shorter range, but may produce visible artefacts.
 	// In general, it is best to use the default threshold and simply adjust your distance attenuation.
-	//spot->calcRange();
+	spot->calcRange();
 
 	// The modulation map can be animated using the modulation parameters translateX, translateY, rotateZ and scale.
 	// Each parameter is defined by an offset (or start value), a linear animation and an oscillating one, of which 
@@ -196,8 +197,9 @@ void LightsApp::setup()
 	//
 	mLights.push_back( Light::createCapsule() );
 	CapsuleLightRef capsule = dynamic_pointer_cast<CapsuleLight>( mLights.back() );
-	capsule->setLengthAndAxis( vec3( 5, 1, -5 ), vec3( -5, 1, 5 ) );
+	capsule->setLengthAndAxis( vec3( 5, 2.5f, -5 ), vec3( -5, 2.5f, 5 ) );
 	capsule->setRange( 5 );
+	//capsule->setAttenuation( 0, 0.5f );
 	capsule->setVisible( false );
 	//*/
 
@@ -233,7 +235,7 @@ void LightsApp::update()
 	{
 		float x = 5.0f * math<float>::cos( t );
 		float z = 5.0f * math<float>::sin( t );
-		dynamic_pointer_cast<CapsuleLight>( mLights[2] )->setLengthAndAxis( vec3( 5.0f + x, 1, z ), vec3( 5.0f - x, 1, -z ) );
+		dynamic_pointer_cast<CapsuleLight>( mLights[2] )->setLengthAndAxis( vec3( 5.0f + x, 2.5f, z ), vec3( 5.0f - x, 2.5f, -z ) );
 	}
 	}
 
@@ -261,8 +263,6 @@ void LightsApp::update()
 	// Update debug sketch.
 	mSketch->clear();
 
-	gl::color( 1, 1, 1 );
-	mSketch->grid( 100, 10 );
 	for( size_t i = 0; i < mLights.size(); ++i ) {
 		if( mLights[i]->isVisible() )
 			mSketch->light( *mLights[i].get() );
@@ -326,6 +326,7 @@ void LightsApp::mouseDrag( MouseEvent event )
 void LightsApp::keyDown( KeyEvent event )
 {
 	SpotLightRef spot = static_pointer_cast<SpotLight>( mLights[0] );
+	WedgeLightRef wedge = static_pointer_cast<WedgeLight>( mLights[3] );
 
 	switch( event.getCode() ) {
 	case KeyEvent::KEY_1:
@@ -366,15 +367,40 @@ void LightsApp::keyDown( KeyEvent event )
 			spot->setHotspotRatio( 0 );
 		else
 			spot->setHotspotRatio( spot->getSpotRatio() );
+		if( wedge->getHotspotRatio() > 0 )
+			wedge->setHotspotRatio( 0 );
+		else
+			wedge->setHotspotRatio( wedge->getSpotRatio() );
 		break;
 	case KeyEvent::KEY_d:
 		if( spot->getAttenuation().y > 0 ) {
 			spot->setAttenuation( 0, 0 );
-			spot->setRange( 50 );
+			spot->setRange( 100 );
 		}
 		else {
 			spot->setAttenuation( 0, 0.04f );
 			spot->calcRange();
+		}
+		if( wedge->getAttenuation().y > 0 ) {
+			wedge->setAttenuation( 0, 0 );
+			wedge->setRange( 100 );
+		}
+		else {
+			wedge->setAttenuation( 0, 0.04f );
+			wedge->calcRange();
+		}
+		break;
+	case KeyEvent::KEY_SPACE:
+		try {
+			// Shaders.
+			mShader = gl::GlslProg::create( loadAsset( "lighting.vert" ), loadAsset( "lighting.frag" ) );
+
+			// 
+			mRoom->replaceGlslProg( mShader );
+			mObject->replaceGlslProg( mShader );
+		}
+		catch( const std::exception &e ) {
+			console() << e.what() << std::endl;
 		}
 		break;
 	}
@@ -387,20 +413,30 @@ void LightsApp::resize()
 
 void LightsApp::render( bool onlyShadowCasters )
 {
+	gl::enableFaceCulling();
+	gl::pushModelMatrix();
+
 	if( onlyShadowCasters ) {
-		gl::pushModelMatrix();
+		gl::cullFace( GL_FRONT );
+		gl::translate( vec3( 0, 50, 0 ) );
+		mRoomShadow->draw();
+
+		gl::cullFace( GL_BACK );
 		gl::setModelMatrix( mTransform );
 		mObjectShadow->draw();
-		gl::popModelMatrix();
 	}
 	else {
-		mFloor->draw();
+		gl::cullFace( GL_FRONT );
+		gl::translate( vec3( 0, 50, 0 ) );
+		mRoom->draw();
 
-		gl::pushModelMatrix();
+		gl::cullFace( GL_BACK );
 		gl::setModelMatrix( mTransform );
 		mObject->draw();
-		gl::popModelMatrix();
 	}
+
+	gl::popModelMatrix();
+	gl::enableFaceCulling( false );
 }
 
 CINDER_APP_NATIVE( LightsApp, RendererGl )
