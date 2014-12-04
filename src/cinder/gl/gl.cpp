@@ -1228,7 +1228,7 @@ void draw( const Shape2d &shape, float approximationScale )
 		gl::draw( path );
 }
 
-void draw( const PolyLine<vec2> &polyLine )
+void draw( const PolyLine2 &polyLine )
 {
 	auto ctx = context();
 	GlslProgRef curGlslProg = ctx->getGlslProg();
@@ -1256,7 +1256,7 @@ void draw( const PolyLine<vec2> &polyLine )
 	ctx->popVao();
 }
 
-void draw( const PolyLine<vec3> &polyLine )
+void draw( const PolyLine3 &polyLine )
 {
 	auto ctx = context();
 	GlslProgRef curGlslProg = ctx->getGlslProg();
@@ -1371,7 +1371,7 @@ void drawSolid( const Shape2d &shape, float approximationScale )
 	draw( Triangulator( shape ).calcMesh() );
 }
 
-void drawSolid( const PolyLine<vec2> &polyLine )
+void drawSolid( const PolyLine2 &polyLine )
 {
 	draw( Triangulator( polyLine ).calcMesh() );
 }
@@ -2105,19 +2105,21 @@ ScopedTextureBind::ScopedTextureBind( const TextureBaseRef &texture, uint8_t tex
 // These overloads are to alleviate a VS2013 bug where it cannot deduce
 // the correct constructor when a TextureBaseRef subclass is passed in
 ScopedTextureBind::ScopedTextureBind( const Texture2dRef &texture, uint8_t textureUnit )
-: mCtx( gl::context() ), mTarget( texture->getTarget() ), mTextureUnit( textureUnit )
+	: mCtx( gl::context() ), mTarget( texture->getTarget() ), mTextureUnit( textureUnit )
 {
 	mCtx->pushTextureBinding( mTarget, texture->getId(), mTextureUnit );
 }
 
+#if ! defined( CINDER_GL_ES_2 )
 ScopedTextureBind::ScopedTextureBind( const Texture3dRef &texture, uint8_t textureUnit )
-: mCtx( gl::context() ), mTarget( texture->getTarget() ), mTextureUnit( textureUnit )
+	: mCtx( gl::context() ), mTarget( texture->getTarget() ), mTextureUnit( textureUnit )
 {
 	mCtx->pushTextureBinding( mTarget, texture->getId(), mTextureUnit );
 }
+#endif // ! defined( CINDER_GL_ES_2 )
 
 ScopedTextureBind::ScopedTextureBind( const TextureCubeMapRef &texture, uint8_t textureUnit )
-: mCtx( gl::context() ), mTarget( texture->getTarget() ), mTextureUnit( textureUnit )
+	: mCtx( gl::context() ), mTarget( texture->getTarget() ), mTextureUnit( textureUnit )
 {
 	mCtx->pushTextureBinding( mTarget, texture->getId(), mTextureUnit );
 }

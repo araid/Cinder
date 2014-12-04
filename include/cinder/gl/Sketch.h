@@ -59,6 +59,9 @@ public:
 
 	void draw()
 	{
+		if( mVertices.empty() )
+			return;
+
 		gl::pushMatrices();
 
 		if( mAutoTransform ) {
