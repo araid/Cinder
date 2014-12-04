@@ -101,11 +101,6 @@ void Sketch::light( const Light& light )
 	}
 }
 
-void Sketch::light( const LightRef& light )
-{
-
-}
-
 // Leaves mVAO bound
 void Sketch::setupBuffers()
 {
