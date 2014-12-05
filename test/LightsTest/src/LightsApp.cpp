@@ -121,9 +121,12 @@ void LightsApp::setup()
 		quit();
 	}
 
-	// Create 3D objects.
-	mRoom = gl::Batch::create( geom::FlipNormals( geom::Cube().size( vec3( 50 ) ) ), mShader );
-	mRoomShadow = gl::Batch::create( geom::FlipNormals( geom::Cube().size( vec3( 50 ) ) ), mShaderShadow );
+	// Create 3D room using a box and then flipping the normals. This is only required if the shader is actually using normals.
+	auto flipNormals = []( const vec3& normal ) { return -normal; };
+	mRoom = gl::Batch::create( geom::AttribFn<vec3, vec3>( geom::Cube().size( vec3( 50 ) ), geom::NORMAL, geom::NORMAL, flipNormals ), mShader );
+	mRoomShadow = gl::Batch::create( geom::Cube().size( vec3( 50 ) ), mShaderShadow );
+
+	// Create an object in the room.
 	mObject = gl::Batch::create( geom::Teapot().subdivisions( 60 ), mShader );
 	mObjectShadow = gl::Batch::create( geom::Teapot().subdivisions( 20 ), mShaderShadow );
 
@@ -227,10 +230,11 @@ void LightsApp::update()
 		// Animate light sources.
 		float t = 0.25f * float( getElapsedSeconds() );
 		{
-			float x = 10.0f * math<float>::cos( 3.5f * t );
-			float z = 10.0f * math<float>::sin( t );
-			dynamic_pointer_cast<SpotLight>( mLights[0] )->pointAt( vec3( x, 0, z ) );
-			dynamic_pointer_cast<WedgeLight>( mLights[3] )->pointAt( vec3( x, 0, z ) );
+			float x = 20.0f * math<float>::cos( 3.5f * t );
+			float y = 1.0f + math<float>::sin( 0.3f * t );
+			float z = 20.0f * math<float>::sin( t );
+			dynamic_pointer_cast<SpotLight>( mLights[0] )->pointAt( vec3( x, y, z ) );
+			dynamic_pointer_cast<WedgeLight>( mLights[3] )->pointAt( vec3( x, y, z ) );
 		}
 	{
 		float x = 5.0f * math<float>::cos( t );
@@ -413,19 +417,17 @@ void LightsApp::resize()
 
 void LightsApp::render( bool onlyShadowCasters )
 {
-	gl::enableFaceCulling();
 	gl::pushModelMatrix();
 
 	if( onlyShadowCasters ) {
-		gl::cullFace( GL_FRONT );
 		gl::translate( vec3( 0, 50, 0 ) );
 		mRoomShadow->draw();
-
-		gl::cullFace( GL_BACK );
 		gl::setModelMatrix( mTransform );
 		mObjectShadow->draw();
 	}
 	else {
+		gl::enableFaceCulling();
+
 		gl::cullFace( GL_FRONT );
 		gl::translate( vec3( 0, 50, 0 ) );
 		mRoom->draw();
@@ -433,10 +435,11 @@ void LightsApp::render( bool onlyShadowCasters )
 		gl::cullFace( GL_BACK );
 		gl::setModelMatrix( mTransform );
 		mObject->draw();
+
+		gl::enableFaceCulling( false );
 	}
 
 	gl::popModelMatrix();
-	gl::enableFaceCulling( false );
 }
 
 CINDER_APP_NATIVE( LightsApp, RendererGl )

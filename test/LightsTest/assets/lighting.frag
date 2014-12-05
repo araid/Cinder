@@ -33,6 +33,11 @@ in vec3 vertNormal;
 
 out vec4 fragColor;
 
+float saturate( in float v )
+{
+	return clamp( v, 0.0, 1.0 );
+}
+
 float calcShadowPCF4x4( in sampler2DShadow map, in vec4 sc )
 {
 	const int r = 2;
@@ -83,15 +88,14 @@ vec3 calcRepresentativePoint( in vec3 p0, in vec3 p1, in vec3 v, in vec3 r )
 	float a = dot( r, ld );
 	float t = ( dot( r, l0 ) * a - dot( l0, ld ) ) / ( dot( ld, ld ) - a * a );
 
-	return p0 + clamp( t, 0, 1 ) * (p1 - p0);
+	return p0 + saturate( t ) * (p1 - p0);
 }
 
 void main(void)
 {
-	const vec3  materialDiffuseColor = vec3( 1.0 );
-	const vec3  materialSpecularColor = vec3( 0.1 );
-	const float materialShininess = 5000.0;
-	const float normalization = ( materialShininess + 8.0 ) / ( 3.14159265 * 8.0 );
+	const vec3  materialDiffuseColor = vec3( 1 );
+	const vec3  materialSpecularColor = vec3( 1 );
+	const float materialShininess = 250.0;
 
 	// Initialize ambient, diffuse and specular colors.
 	vec3 ambient = vec3( 0 );
@@ -147,25 +151,31 @@ void main(void)
 		float lambert = max( 0.0, dot( N, L ) );
 		diffuse += shadow * colorAttenuation * distanceAttenuation * angularAttenuation * lambert * materialDiffuseColor;
 
-#define use_blinn_phong 1
-
-#if use_blinn_phong
 		// Calculate representative light vector (for linear lights only).
 		if( ( type & 0xA ) > 0 ) {
-			lightPosition = calcRepresentativePoint( p0, p1, vertPosition.xyz, normalize( reflect( -E, N ) ) );
-			L = normalize( lightPosition - vertPosition.xyz );
+			lightPosition = calcRepresentativePoint( p0, p1, vertPosition.xyz, -reflect( E, N ) );
+			L = lightPosition - vertPosition.xyz;
+			distance = length( L );
+			distanceAttenuation = calcSpotDistanceAttenuation( distance, uLight[i].attenuation, 1.0e14 );
+			L /= distance;
 		}
-#endif
+
+#define USE_BLINN_PHONG 0
+#if USE_BLINN_PHONG
+		const float normalization = ( materialShininess + 8.0 ) / ( 3.14159265 * 8.0 );		
 		
 		// Calculate specular color.
-#if use_blinn_phong
 		vec3 H = normalize( L + E );
 		float reflection = normalization * pow( max( 0.0, dot( N, H ) ), materialShininess );
+		specular += colorAttenuation * distanceAttenuation * angularAttenuation * reflection * materialSpecularColor;
 #else
-		float reflection = normalization * pow( max( 0.0, dot( N, L ) ), materialShininess );
+		const float normalization = ( materialShininess + 2.0 ) / ( 3.14159265 * 2.0 );
+
+		// Calculate specular color.
+		vec3 R = normalize( -reflect( L, N ) );
+		float reflection = normalization * pow( max( 0.0, dot( R, E ) ), materialShininess );
+		specular += colorAttenuation * distanceAttenuation * angularAttenuation * reflection * materialSpecularColor;
 #endif
-		distanceAttenuation = mix( 1.0, calcSpotDistanceAttenuation( distance, uLight[i].attenuation, uLight[i].range ), ( type & 0xF ) > 0 ); // Point, capsule, spot & wedge light only.
-		specular += angularAttenuation * colorAttenuation * reflection * materialSpecularColor;
 	}
 
 	// Output gamma-corrected color.
