@@ -1981,39 +1981,6 @@ void Twist::loadInto( Target *target, const AttribSet &requestedAttribs ) const
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
-// FlipNormals
-uint8_t FlipNormals::getAttribDims( Attrib attr ) const
-{
-	return mSource.getAttribDims( attr );
-}
-
-AttribSet FlipNormals::getAvailableAttribs() const
-{
-	return mSource.getAvailableAttribs();
-}
-
-void FlipNormals::loadInto( Target *target, const AttribSet &requestedAttribs ) const
-{
-	// we want to capture and then modify normals
-	map<Attrib, Modifier::Access> attribAccess;
-	attribAccess[NORMAL] = Modifier::READ_WRITE;
-	Modifier modifier( mSource, target, attribAccess, Modifier::IGNORED );
-	mSource.loadInto( &modifier, requestedAttribs );
-
-	const size_t numVertices = mSource.getNumVertices();
-
-	if( modifier.getReadAttribDims( NORMAL ) == 3 ) {
-		vec3* normals = reinterpret_cast<vec3*>( modifier.getReadAttribData( NORMAL ) );
-
-		for( size_t v = 0; v < numVertices; ++v ) {
-			normals[v] = -normals[v];
-		}
-		
-		target->copyAttrib( Attrib::NORMAL, 3, 0, (const float*) normals, numVertices );
-	}
-}
-
-///////////////////////////////////////////////////////////////////////////////////////
 // Lines
 size_t Lines::getNumIndices() const
 {
@@ -2264,8 +2231,13 @@ void geom::AttribFn<S,D>::loadInto( Target *target, const AttribSet &requestedAt
 {
 	// we want to capture 'mSrcAttrib' and we want to write 'mDstAttrib'
 	std::map<Attrib,Modifier::Access> attribAccess;
-	attribAccess[mSrcAttrib] = Modifier::READ;
-	attribAccess[mDstAttrib] = Modifier::WRITE;
+	if( mSrcAttrib == mDstAttrib ) {
+		attribAccess[mSrcAttrib] = Modifier::READ_WRITE;
+	}
+	else {
+		attribAccess[mSrcAttrib] = Modifier::READ;
+		attribAccess[mDstAttrib] = Modifier::WRITE;
+	}
 	Modifier modifier( mSource, target, attribAccess, Modifier::IGNORED );
 	mSource.loadInto( &modifier, requestedAttribs );
 
@@ -2292,7 +2264,7 @@ void geom::AttribFn<S,D>::loadInto( Target *target, const AttribSet &requestedAt
 		inputAttribData = modifier.getReadAttribData( mSrcAttrib );
 	
 	processAttrib<S,D>( inputAttribData, outData.get(), mFn, numVertices );
-	target->copyAttrib( Attrib::COLOR, DSTDIM, 0, outData.get(), numVertices );
+	target->copyAttrib( mDstAttrib, DSTDIM, 0, outData.get(), numVertices );
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
