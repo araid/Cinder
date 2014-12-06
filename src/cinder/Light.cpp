@@ -48,13 +48,13 @@ Light::Data Light::getData( double time, const mat4 &transform ) const
 
 void Light::setColor( const Color &color )
 {
-	// Keep values for red, green and blue within range [0, 1] and adjust intensity accordingly.
+	// Keep values for red, green and blue within range [0, 1].
 	float m = math<float>::max( color.r, math<float>::max( color.g, color.b ) );
-
-	mIntensity = m;
 
 	if( m > 0 )
 		m = 1.0f / m;
+	else
+		m = 0.0f;
 
 	mColor = m * color;
 }

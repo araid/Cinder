@@ -208,7 +208,7 @@ void LightsApp::setup()
 	capsule->setRange( 5 );
 	capsule->setAttenuation( 0, 1 );
 	capsule->setVisible( false );
-	
+
 	// Create wedge light.
 	WedgeLightRef wedge = Light::createWedge();
 	mLights.push_back( wedge );
@@ -219,6 +219,13 @@ void LightsApp::setup()
 	wedge->setSpotRatio( 0.25f );
 	wedge->calcRange();
 	wedge->setVisible( false );
+
+	// Create directional light.
+	DirectionalLightRef directional = Light::createDirectional();
+	mLights.push_back( directional );
+
+	directional->setDirection( vec3( 3, -2, -1 ) );
+	directional->setIntensity( 0.1f );
 
 	// Create shadow map.
 	mShadowMap = ShadowMap::create( 2048 );
@@ -297,13 +304,6 @@ void LightsApp::draw()
 		}
 	}
 
-	// Update shader uniforms.
-	gl::ScopedGlslProg shader( mShader );
-	mShader->uniform( "uLightCount", numVisible );
-	mShader->uniform( "uModulationMap[0]", 1 );
-	mShader->uniform( "uShadowMap[0]", 2 );
-	mShader->uniform( "uSkyDirection", mCamera.getViewMatrix() * vec4( 0, 1, 0, 0 ) );
-
 	// Render scene.
 	{
 		gl::pushMatrices();
@@ -311,6 +311,14 @@ void LightsApp::draw()
 
 		mSketch->draw();
 
+		// Update shader uniforms.
+		gl::ScopedGlslProg shader( mShader );
+		mShader->uniform( "uLightCount", numVisible );
+		mShader->uniform( "uModulationMap[0]", 1 );
+		mShader->uniform( "uShadowMap[0]", 2 );
+		mShader->uniform( "uSkyDirection", mCamera.getViewMatrix() * vec4( 0, 1, 0, 0 ) );
+
+		// Bind textures and render.
 		gl::ScopedTextureBind gobo( mModulationTexture, (uint8_t) 1 );
 		gl::ScopedTextureBind shadowmap( mShadowMap->getTexture(), (uint8_t) 2 );
 		render( false );
@@ -357,24 +365,29 @@ void LightsApp::keyDown( KeyEvent event )
 	PointLightRef point = static_pointer_cast<PointLight>( mLights[1] );
 	CapsuleLightRef capsule = static_pointer_cast<CapsuleLight>( mLights[2] );
 	WedgeLightRef wedge = static_pointer_cast<WedgeLight>( mLights[3] );
+	DirectionalLightRef directional = static_pointer_cast<DirectionalLight>( mLights[4] );
 
 	// Handle keyboard input.
 	switch( event.getCode() ) {
 	case KeyEvent::KEY_1:
 		// Toggle spot light.
-		mLights[0]->setVisible( !mLights[0]->isVisible() );
+		spot->setVisible( !spot->isVisible() );
 		break;
 	case KeyEvent::KEY_2:
 		// Toggle point light.
-		mLights[1]->setVisible( !mLights[1]->isVisible() );
+		point->setVisible( !point->isVisible() );
 		break;
 	case KeyEvent::KEY_3:
 		// Toggle capsule light.
-		mLights[2]->setVisible( !mLights[2]->isVisible() );
+		capsule->setVisible( !capsule->isVisible() );
 		break;
 	case KeyEvent::KEY_4:
 		// Toggle wedge light.
-		mLights[3]->setVisible( !mLights[3]->isVisible() );
+		wedge->setVisible( !wedge->isVisible() );
+		break;
+	case KeyEvent::KEY_5:
+		// Toggle directional light.
+		directional->setVisible( !directional->isVisible() );
 		break;
 	case KeyEvent::KEY_a:
 		// Toggle light animation.
@@ -382,10 +395,11 @@ void LightsApp::keyDown( KeyEvent event )
 		break;
 	case KeyEvent::KEY_c:
 		// Colorize lights.
-		mLights[0]->setColor( 1, 0, 0 );
-		mLights[1]->setColor( 0, 1, 0 );
-		mLights[2]->setColor( 0, 0, 1 );
-		mLights[3]->setColor( 1, 1, 0 );
+		spot->setColor( 0, 1, 0 );
+		point->setColor( 1, 1, 1 );
+		capsule->setColor( 1, 0, 1 );
+		wedge->setColor( 1, 1, 0 );
+		directional->setColor( 0, 1, 1 );
 		break;
 	case KeyEvent::KEY_m:
 		// Toggle modulation map.
@@ -397,10 +411,8 @@ void LightsApp::keyDown( KeyEvent event )
 		break;
 	case KeyEvent::KEY_w:
 		// White lights.
-		mLights[0]->setColor( 1, 1, 1 );
-		mLights[1]->setColor( 1, 1, 1 );
-		mLights[2]->setColor( 1, 1, 1 );
-		mLights[3]->setColor( 1, 1, 1 );
+		for( size_t i = 0; i < mLights.size(); ++i )
+			mLights[i]->setColor( 1, 1, 1 );
 		break;
 	case KeyEvent::KEY_h:
 		// Toggle hotspot for spot and wedge lights.
