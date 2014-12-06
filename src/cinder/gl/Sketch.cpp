@@ -22,6 +22,7 @@
  */
 
 #include "cinder/gl/Sketch.h"
+#include <memory>
 
 namespace cinder {
 namespace gl {
@@ -57,43 +58,43 @@ void Sketch::frustum( const Camera& cam )
 	implDrawLine( eye, nearBottomLeft );
 }
 
-void Sketch::light( const Light& light )
+void Sketch::light( const LightRef& light )
 {
-	gl::ScopedColor color( light.getColor() );
+	gl::ScopedColor color( light->getColor() );
 
-	switch( light.getType() ) {
+	switch( light->getType() ) {
 	case Light::Directional:
 		break;
 	case Light::Point:
 	{
-		const PointLight& ref = static_cast<const PointLight&>( light );
-		sphere( ref.getPosition(), ref.getRange() );
+		const PointLightRef ref = std::static_pointer_cast<PointLight>( light );
+		sphere( ref->getPosition(), ref->getRange() );
 	}
 		break;
 	case Light::Capsule:
 	{
-		const CapsuleLight& ref = static_cast<const CapsuleLight&>( light );
-		const vec3& position = ref.getPosition();
-		vec3 offset = 0.5f * ref.getAxis() * ref.getLength();
-		capsule( position - offset, position + offset, ref.getRange() );
+		const CapsuleLightRef ref = std::static_pointer_cast<CapsuleLight>( light );
+		const vec3& position = ref->getPosition();
+		vec3 offset = 0.5f * ref->getAxis() * ref->getLength();
+		capsule( position - offset, position + offset, ref->getRange() );
 	}
 		break;
 	case Light::Spot:
 	{
-		const SpotLight& ref = static_cast<const SpotLight&>( light );
-		float range = ref.getRange() * glm::inversesqrt( 1.0f + glm::pow( ref.getSpotRatio(), 2.0f ) );
-		const vec3& position = ref.getPosition();
-		const vec3& lookat = position + range * ref.getDirection();
-		cone( position, lookat, ref.getSpotRatio() );
-		cap( lookat, range * ref.getSpotRatio(), position );
+		const SpotLightRef ref = std::static_pointer_cast<SpotLight>( light );
+		float range = ref->getRange() * glm::inversesqrt( 1.0f + glm::pow( ref->getSpotRatio(), 2.0f ) );
+		const vec3& position = ref->getPosition();
+		const vec3& lookat = position + range * ref->getDirection();
+		cone( position, lookat, ref->getSpotRatio() );
+		cap( lookat, range * ref->getSpotRatio(), position );
 	}
 		break;
 	case Light::Wedge:
 	{
-		const WedgeLight& ref = static_cast<const WedgeLight&>( light );
-		const vec3& position = ref.getPosition();
-		float range = ref.getRange() * glm::inversesqrt( 1.0f + glm::pow( ref.getSpotRatio(), 2.0f ) );
-		wedge( position, position + range * ref.getDirection(), ref.getAxis() * ref.getLength(), ref.getSpotRatio() );
+		const WedgeLightRef ref = std::static_pointer_cast<WedgeLight>( light );
+		const vec3& position = ref->getPosition();
+		float range = ref->getRange() * glm::inversesqrt( 1.0f + glm::pow( ref->getSpotRatio(), 2.0f ) );
+		wedge( position, position + range * ref->getDirection(), ref->getAxis() * ref->getLength(), ref->getSpotRatio() );
 	}
 		break;
 	default:

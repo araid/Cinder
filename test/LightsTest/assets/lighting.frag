@@ -95,7 +95,7 @@ void main(void)
 {
 	const vec3  materialDiffuseColor = vec3( 1 );
 	const vec3  materialSpecularColor = vec3( 1 );
-	const float materialShininess = 250.0;
+	const float materialShininess = 100.0;
 
 	// Initialize ambient, diffuse and specular colors.
 	vec3 ambient = vec3( 0 );
@@ -108,13 +108,24 @@ void main(void)
 
 	// Hemispherical ambient lighting.
 	float hemi = 0.5 + 0.5 * dot( uSkyDirection.xyz, N );
-	ambient = mix( vec3( 0 ), vec3( 0.05 ), hemi ) * materialDiffuseColor;
+	ambient = mix( vec3( 0 ), vec3( 0.01 ), hemi ) * materialDiffuseColor;
 
 	// Calculate lighting.
 	for( int i=0; i<uLightCount; ++i )
 	{
 		// Fetch light type.
 		int type = uLight[i].flags & 0xF;
+
+		// Calculate shadow.
+		float shadow = 1.0;
+		if( ( uLight[i].flags & 0x20 ) > 0 )
+		{
+			vec4 shadowCoord = uLight[i].shadowMatrix * vertPosition;
+			shadow = calcShadowPCF4x4( uShadowMap[ uLight[i].shadowIndex ], shadowCoord );
+
+			if( shadow == 0.0 )
+				continue;
+		}
 
 		// Calculate modulation.
 		vec3 modulation = vec3( 1 );
@@ -124,23 +135,19 @@ void main(void)
 			modulation = textureProj( uModulationMap[ uLight[i].modulationIndex ], modulationCoord ).rgb;
 		}
 
-		// Calculate shadow.
-		float shadow = 1.0;
-		if( ( uLight[i].flags & 0x20 ) > 0 )
-		{
-			vec4 shadowCoord = uLight[i].shadowMatrix * vertPosition;
-			shadow = calcShadowPCF4x4( uShadowMap[ uLight[i].shadowIndex ], shadowCoord );
-		}
-
 		// Calculate end-points of the light for convenience.
 		vec3 p0 = uLight[i].position.xyz;
 		vec3 p1 = uLight[i].position.xyz + uLight[i].length.w * uLight[i].length.xyz;
 
 		// Calculate direction and distance to light.
-		vec3 lightPosition = p0 + clamp( dot( uLight[i].length.xyz, vertPosition.xyz - p0 ), 0.0, uLight[i].length.w ) * uLight[i].length.xyz;
-		vec3 L = mix( -uLight[i].direction, lightPosition - vertPosition.xyz, ( type & 0xF ) > 0 ); // Use light direction for directional lights.
-		float distance = length( L );
-		L /= distance;
+		vec3 L = -uLight[i].direction;
+		float distance = 1.0;
+
+		if( type > 0 ) 
+		{
+			vec3 lightPosition = p0 + clamp( dot( uLight[i].length.xyz, vertPosition.xyz - p0 ), 0.0, uLight[i].length.w ) * uLight[i].length.xyz;
+			L = lightPosition - vertPosition.xyz; distance = length( L ); L /= distance;
+		}
 
 		// Calculate attenuation.
 		float angularAttenuation = mix( 1.0, calcSpotAngularAttenuation( L, uLight[i].direction, uLight[i].angle ), ( type & 0xC ) > 0 ); // Spot & wedge light only.
@@ -153,11 +160,10 @@ void main(void)
 
 		// Calculate representative light vector (for linear lights only).
 		if( ( type & 0xA ) > 0 ) {
-			lightPosition = calcRepresentativePoint( p0, p1, vertPosition.xyz, -reflect( E, N ) );
-			L = lightPosition - vertPosition.xyz;
-			distance = length( L );
+			vec3 lightPosition = calcRepresentativePoint( p0, p1, vertPosition.xyz, -reflect( E, N ) );
+			L = lightPosition - vertPosition.xyz; distance = length( L ); L /= distance;
+
 			distanceAttenuation = calcSpotDistanceAttenuation( distance, uLight[i].attenuation, 1.0e14 );
-			L /= distance;
 		}
 
 #define USE_BLINN_PHONG 0

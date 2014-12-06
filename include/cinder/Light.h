@@ -135,21 +135,13 @@ public:
 	};
 
 public:
-	Light( Type type )
-		: mType( type )
-		, mIntensity( 1 )
-		, mColor( 1, 1, 1 )
-		, mFlags( type )
-		, mVisible( true )
-	{
-	}
 	virtual ~Light() {}
 
-	static std::shared_ptr<DirectionalLight> createDirectional() { return std::make_shared<DirectionalLight>(); }
-	static std::shared_ptr<PointLight> createPoint() { return std::make_shared<PointLight>(); }
-	static std::shared_ptr<CapsuleLight> createCapsule() { return std::make_shared<CapsuleLight>(); }
-	static std::shared_ptr<SpotLight> createSpot() { return std::make_shared<SpotLight>(); }
-	static std::shared_ptr<WedgeLight> createWedge() { return std::make_shared<WedgeLight>(); }
+	static std::shared_ptr<DirectionalLight> createDirectional();
+	static std::shared_ptr<PointLight> createPoint();
+	static std::shared_ptr<CapsuleLight> createCapsule();
+	static std::shared_ptr<SpotLight> createSpot();
+	static std::shared_ptr<WedgeLight> createWedge();
 
 	//! Returns the type of the light (directional, point, capsule, spot or wedge).
 	virtual Type getType() const { return mType; }
@@ -160,7 +152,9 @@ public:
 		view space, simply supply the camera's view matrix as the \a transform.*/
 	virtual Data getData( double time = 0.0, const mat4 &transform = mat4() ) const = 0;
 
+	//! Returns TRUE if the light has been flagged as \a visible.
 	bool isVisible() const { return mVisible; }
+	//! Flag the light as \a visible. Only visible lights contribute to the current view of the world.
 	void setVisible( bool visible = true ) { mVisible = visible; }
 
 	//! Returns the intensity of the light.
@@ -184,6 +178,15 @@ public:
 	bool operator<( const Light& rhs ) const { return (int) mType < (int) rhs.mType; }
 
 protected:
+	Light( Type type )
+		: mType( type )
+		, mIntensity( 1 )
+		, mColor( 1, 1, 1 )
+		, mFlags( type )
+		, mVisible( true )
+	{
+	}
+
 	static bool calcRange( float intensity, const vec2 &attenuation, float *range, float threshold );
 	static bool calcIntensity( float range, const vec2 &attenuation, float *intensity, float threshold );
 
@@ -206,9 +209,9 @@ typedef std::shared_ptr<class DirectionalLight> DirectionalLightRef;
 
 class DirectionalLight : public Light, public ILightDirection {
 public:
-	DirectionalLight()
-		: Light( Directional ), mDirection( 0, -1, 0 ) {}
 	~DirectionalLight() {}
+
+	static std::shared_ptr<DirectionalLight> create() { return DirectionalLightRef( new DirectionalLight ); }
 
 	/*! Returns a structure containing all data for this light as required by the shader.
 		You can optionally specify a \a time in seconds for animation effects. Light position,
@@ -219,6 +222,11 @@ public:
 	const vec3& getDirection() const override { return mDirection; }
 	vec3 getDirection( const mat4& transform ) const override { return vec3( transform * vec4( mDirection, 0 ) ); }
 	void setDirection( const vec3& direction ) override { mDirection = glm::normalize( direction ); }
+
+private:
+	DirectionalLight()
+		: Light( Directional ), mDirection( 0, -1, 0 ) {}
+
 private:
 	vec3       mDirection;
 };
@@ -229,9 +237,9 @@ typedef std::shared_ptr<class PointLight> PointLightRef;
 
 class PointLight : public Light, public ILightPosition, public ILightRange, public ILightAttenuation {
 public:
-	PointLight()
-		: Light( Point ), mPosition( 0 ), mRange( 100 ), mAttenuation( 0 ) {}
 	virtual ~PointLight() {}
+
+	static std::shared_ptr<PointLight> create() { return PointLightRef( new PointLight ); }
 
 	/*! Returns a structure containing all data for this light as required by the shader.
 		You can optionally specify a \a time in seconds for animation effects. Light position,
@@ -262,8 +270,10 @@ public:
 	void setAttenuation( float linear, float quadratic ) override { setAttenuation( vec2( linear, quadratic ) ); }
 
 protected:
+	PointLight()
+		: PointLight( Point ) {}
 	PointLight( Type type )
-		: Light( type ) {}
+		: Light( type ), mPosition( 0 ), mRange( 100 ), mAttenuation( 0 ) {}
 
 protected:
 	vec3       mPosition;
@@ -277,9 +287,9 @@ typedef std::shared_ptr<class CapsuleLight> CapsuleLightRef;
 
 class CapsuleLight : public PointLight, public ILightLength {
 public:
-	CapsuleLight()
-		: PointLight( Capsule ), mLength( 0 ), mAxis( 1, 0, 0 ) {}
 	~CapsuleLight() {}
+
+	static std::shared_ptr<CapsuleLight> create() { return CapsuleLightRef( new CapsuleLight ); }
 
 	/*! Returns a structure containing all data for this light as required by the shader.
 		You can optionally specify a \a time in seconds for animation effects. Light position,
@@ -300,6 +310,10 @@ public:
 		mLength = glm::length( line );
 		setPosition( ( a + b ) * 0.5f );
 	}
+
+private:
+	CapsuleLight()
+		: PointLight( Capsule ), mLength( 0 ), mAxis( 1, 0, 0 ) {}
 
 private:
 	float mLength;
@@ -337,12 +351,9 @@ public:
 	};
 
 public:
-	SpotLight()
-		: Light( Spot ), mPosition( 0 ), mDirection( 0, -1, 0 ), mRange( 100 ), mSpotRatio( 1 ), mHotspotRatio( 1 )
-		, mAttenuation( 0 ), mPointAt( 0 ), mIsPointingAt( false ), mModulationIndex( 0 ), mShadowIndex( 0 ), mIsDirty( true )
-	{
-	}
 	virtual ~SpotLight() {}
+
+	static std::shared_ptr<SpotLight> create() { return SpotLightRef( new SpotLight ); }
 
 	/*! Returns a structure containing all data for this light as required by the shader.
 		You can optionally specify a \a time in seconds for animation effects. Light position,
@@ -432,6 +443,8 @@ public:
 	void enableModulation( bool enabled = true ) { if( enabled ) mFlags |= Data::ModulationEnabled; else mFlags &= ~Data::ModulationEnabled; }
 
 protected:
+	SpotLight()
+		: SpotLight( Spot ) {}
 	SpotLight( Type type )
 		: Light( type ), mPosition( 0 ), mDirection( 0, -1, 0 ), mRange( 100 ), mSpotRatio( 1 ), mHotspotRatio( 1 )
 		, mAttenuation( 0 ), mPointAt( 0 ), mIsPointingAt( false ), mModulationIndex( 0 ), mShadowIndex( 0 ), mIsDirty( true )
@@ -470,9 +483,9 @@ typedef std::shared_ptr<class WedgeLight> WedgeLightRef;
 
 class WedgeLight : public SpotLight, public ILightLength {
 public:
-	WedgeLight()
-		: SpotLight( Wedge ), mLength( 0 ), mAxis( 1, 0, 0 ) {}
 	~WedgeLight() {}
+
+	static std::shared_ptr<WedgeLight> create() { return WedgeLightRef( new WedgeLight ); }
 
 	/*! Returns a structure containing all data for this light as required by the shader.
 		You can optionally specify a \a time in seconds for animation effects. Light position,
@@ -548,10 +561,39 @@ public:
 	}
 
 private:
+	WedgeLight()
+		: SpotLight( Wedge ), mLength( 0 ), mAxis( 1, 0, 0 ) {}
+
+private:
 	float mLength;
 	vec3  mAxis;
 
 };
+
+inline std::shared_ptr<DirectionalLight> Light::createDirectional()
+{
+	return DirectionalLight::create();
+}
+
+inline std::shared_ptr<PointLight> Light::createPoint()
+{
+	return PointLight::create();
+}
+
+inline std::shared_ptr<CapsuleLight> Light::createCapsule()
+{
+	return CapsuleLight::create();
+}
+
+inline std::shared_ptr<SpotLight> Light::createSpot()
+{
+	return SpotLight::create();
+}
+
+inline std::shared_ptr<WedgeLight> Light::createWedge()
+{
+	return WedgeLight::create();
+}
 
 } // namespace cinder
 

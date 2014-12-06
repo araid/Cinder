@@ -214,7 +214,7 @@ public:
 	{ implDrawRect( center, size ); }
 
 	//! Draws the light's bounds.
-	void light( const Light &light );
+	void light( const LightRef &light );
 
 private:
 	void implDrawGrid( const vec3& center, const vec3& normal, size_t size, size_t step )

@@ -84,17 +84,18 @@ private:
 	mat4                   mTransform;
 
 	bool                   mAnimated;
+	bool                   mDebugDraw;
 };
 
 void LightsApp::prepareSettings( Settings *settings )
 {
 	settings->setWindowSize( 1280, 720 );
+	settings->disableFrameRate();
 }
 
 void LightsApp::setup()
 {
-	//
-	disableFrameRate();
+	// Disable vertical sync, so we can determine the performance.
 	gl::enableVerticalSync( false );
 
 	// Load assets.
@@ -135,11 +136,12 @@ void LightsApp::setup()
 	mCamera.setCenterOfInterestPoint( vec3( 0, 1, 0 ) );
 
 	// Create a spot light.
-	mLights.push_back( Light::createSpot() );
-	SpotLightRef spot = dynamic_pointer_cast<SpotLight>( mLights.back() );
+	SpotLightRef spot = Light::createSpot();
+	mLights.push_back( spot );
+
 	spot->setPosition( vec3( 0, 9, 0 ) );
 	spot->setDirection( vec3( 0, -1, 0 ) );
-	spot->pointAt( 50.0f * glm::normalize( vec3( 1, 0, 1 ) ) );
+	spot->pointAt( vec3( 0, 1, 0 ) );
 
 	// The color describes the relative intensity of the light for each of the primary colors red, green and blue.
 	// If you want the light to be brighter, change its intensity rather than its color.
@@ -172,7 +174,7 @@ void LightsApp::setup()
 	// you can use the 'calcIntensity' function to calculate it for you. You can optionally supply a threshold,
 	// which is the intensity at full range. Larger threshold values will yield a higher intensity, but may produce
 	// visible artefacts. In general, it is best to use the default threshold and simply adjust your distance attenuation.
-	//mLight->calcIntensity();
+	// spot->calcIntensity();
 
 	// Alternatively, you can adjust the range based on the current intensity and distance attenuation, so that
 	// the intensity will be zero at full range. You can optionally supply a threshold, which is the intensity 
@@ -186,30 +188,33 @@ void LightsApp::setup()
 	spot->getModulationParams().rotateZ = Light::AnimParam( 0, 0.25f, 0, 0 );
 
 	// Enable modulation and shadow.
-	//spot->enableModulation();
+	spot->enableModulation();
 	spot->enableShadows();
 
-	//
-	mLights.push_back( Light::createPoint() );
-	PointLightRef point = dynamic_pointer_cast<PointLight>( mLights.back() );
+	// Create point light.
+	PointLightRef point = Light::createPoint();
+	mLights.push_back( point );
+
 	point->setPosition( vec3( -2.5f, 1, -2.5f ) );
-	point->setRange( 5 );
+	point->setRange( 15 );
+	point->setAttenuation( 0, 0.5f );
 	point->setVisible( false );
-	//*/
 
-	//
-	mLights.push_back( Light::createCapsule() );
-	CapsuleLightRef capsule = dynamic_pointer_cast<CapsuleLight>( mLights.back() );
-	capsule->setLengthAndAxis( vec3( 5, 2.5f, -5 ), vec3( -5, 2.5f, 5 ) );
+	// Create capsule light.
+	CapsuleLightRef capsule = Light::createCapsule();
+	mLights.push_back( capsule );
+
+	capsule->setLengthAndAxis( vec3( 5, 2.5f, -5 ), vec3( -5, 2.5f, -5 ) );
 	capsule->setRange( 5 );
-	//capsule->setAttenuation( 0, 0.5f );
+	capsule->setAttenuation( 0, 1 );
 	capsule->setVisible( false );
-	//*/
+	
+	// Create wedge light.
+	WedgeLightRef wedge = Light::createWedge();
+	mLights.push_back( wedge );
 
-	mLights.push_back( Light::createWedge() );
-	WedgeLightRef wedge = dynamic_pointer_cast<WedgeLight>( mLights.back() );
 	wedge->setLengthAndAxis( vec3( -5, 9, 15 ), vec3( 5, 9, 15 ) );
-	wedge->pointAt( vec3( 0, 0, 10 ) );
+	wedge->pointAt( vec3( 0, 1, 0 ) );
 	wedge->setAttenuation( 0, 0.1f );
 	wedge->setSpotRatio( 0.25f );
 	wedge->calcRange();
@@ -222,25 +227,24 @@ void LightsApp::setup()
 	mSketch = gl::Sketch::create( false );
 
 	mAnimated = false;
+	mDebugDraw = false;
 }
 
 void LightsApp::update()
 {
+	// Animate light sources.
 	if( mAnimated ) {
-		// Animate light sources.
 		float t = 0.25f * float( getElapsedSeconds() );
-		{
-			float x = 20.0f * math<float>::cos( 3.5f * t );
-			float y = 1.0f + math<float>::sin( 0.3f * t );
-			float z = 20.0f * math<float>::sin( t );
-			dynamic_pointer_cast<SpotLight>( mLights[0] )->pointAt( vec3( x, y, z ) );
-			dynamic_pointer_cast<WedgeLight>( mLights[3] )->pointAt( vec3( x, y, z ) );
-		}
-	{
-		float x = 5.0f * math<float>::cos( t );
-		float z = 5.0f * math<float>::sin( t );
+
+		float x = 20.0f * math<float>::cos( 3.5f * t );
+		float y = 1.0f + math<float>::sin( 0.3f * t );
+		float z = 20.0f * math<float>::sin( t );
+		dynamic_pointer_cast<SpotLight>( mLights[0] )->pointAt( vec3( x, y, z ) );
+		dynamic_pointer_cast<WedgeLight>( mLights[3] )->pointAt( vec3( x, y, z ) );
+
+		x = 5.0f * math<float>::cos( t );
+		z = 5.0f * math<float>::sin( t );
 		dynamic_pointer_cast<CapsuleLight>( mLights[2] )->setLengthAndAxis( vec3( 5.0f + x, 2.5f, z ), vec3( 5.0f - x, 2.5f, -z ) );
-	}
 	}
 
 	// Animate object.
@@ -248,28 +252,14 @@ void LightsApp::update()
 	mTransform *= glm::rotate( float( getElapsedSeconds() ), glm::normalize( vec3( 0.1f, 0.5f, 0.2f ) ) );
 	mTransform *= glm::scale( vec3( 3.0f ) );
 
-	// Update shader uniforms.
-	int numVisible = 0;
-	for( size_t i = 0; i < mLights.size(); ++i ) {
-		if( mLights[i]->isVisible() ) {
-			Light::Data light = mLights[i]->getData( getElapsedSeconds(), mCamera.getViewMatrix() );
-			mLightDataBuffer->bufferSubData( numVisible * sizeof( Light::Data ), sizeof( Light::Data ), &light );
-			numVisible++;
-		}
-	}
-
-	gl::ScopedGlslProg shader( mShader );
-	mShader->uniform( "uLightCount", numVisible );
-	mShader->uniform( "uModulationMap[0]", 1 );
-	mShader->uniform( "uShadowMap[0]", 2 );
-	mShader->uniform( "uSkyDirection", mCamera.getViewMatrix() * vec4( 0, 1, 0, 0 ) );
-
 	// Update debug sketch.
 	mSketch->clear();
 
-	for( size_t i = 0; i < mLights.size(); ++i ) {
-		if( mLights[i]->isVisible() )
-			mSketch->light( *mLights[i].get() );
+	if( mDebugDraw ) {
+		for( size_t i = 0; i < mLights.size(); ++i ) {
+			if( mLights[i]->isVisible() )
+				mSketch->light( mLights[i] );
+		}
 	}
 }
 
@@ -297,6 +287,23 @@ void LightsApp::draw()
 		render( true );
 	}
 
+	// Update uniform buffer object containing light data.
+	int numVisible = 0;
+	for( size_t i = 0; i < mLights.size(); ++i ) {
+		if( mLights[i]->isVisible() ) {
+			Light::Data light = mLights[i]->getData( getElapsedSeconds(), mCamera.getViewMatrix() );
+			mLightDataBuffer->bufferSubData( numVisible * sizeof( Light::Data ), sizeof( Light::Data ), &light );
+			numVisible++;
+		}
+	}
+
+	// Update shader uniforms.
+	gl::ScopedGlslProg shader( mShader );
+	mShader->uniform( "uLightCount", numVisible );
+	mShader->uniform( "uModulationMap[0]", 1 );
+	mShader->uniform( "uShadowMap[0]", 2 );
+	mShader->uniform( "uSkyDirection", mCamera.getViewMatrix() * vec4( 0, 1, 0, 0 ) );
+
 	// Render scene.
 	{
 		gl::pushMatrices();
@@ -317,56 +324,86 @@ void LightsApp::draw()
 
 void LightsApp::mouseDown( MouseEvent event )
 {
+	// Start user input.
 	mMayaCam.setCurrentCam( mCamera );
 	mMayaCam.mouseDown( event.getPos() );
 }
 
 void LightsApp::mouseDrag( MouseEvent event )
 {
-	mMayaCam.mouseDrag( event.getPos(), event.isLeftDown(), event.isMiddleDown(), event.isRightDown() );
+	// Handle user input (with support for trackpad).
+	bool isZooming = event.isRightDown() || ( event.isShiftDown() && event.isLeftDown() );
+	bool isPanning = !isZooming && event.isLeftDown();
+
+	mMayaCam.mouseDrag( event.getPos(), isPanning, false, isZooming );
 	mCamera = mMayaCam.getCamera();
+
+	// Restrict the camera a bit.
+	vec3 lookat = mCamera.getCenterOfInterestPoint();
+	vec3 eye = mCamera.getEyePoint();
+	eye.y = math<float>::max( eye.y, 1.0f );
+
+	float d = math<float>::min( 200.0f, glm::distance( eye, lookat ) );
+	eye = lookat + d * glm::normalize( eye - lookat );
+
+	mCamera.setEyePoint( eye );
+	mCamera.setCenterOfInterestPoint( lookat );
 }
 
 void LightsApp::keyDown( KeyEvent event )
 {
+	// Let's get some references for easy access.
 	SpotLightRef spot = static_pointer_cast<SpotLight>( mLights[0] );
+	PointLightRef point = static_pointer_cast<PointLight>( mLights[1] );
+	CapsuleLightRef capsule = static_pointer_cast<CapsuleLight>( mLights[2] );
 	WedgeLightRef wedge = static_pointer_cast<WedgeLight>( mLights[3] );
 
+	// Handle keyboard input.
 	switch( event.getCode() ) {
 	case KeyEvent::KEY_1:
+		// Toggle spot light.
 		mLights[0]->setVisible( !mLights[0]->isVisible() );
 		break;
 	case KeyEvent::KEY_2:
+		// Toggle point light.
 		mLights[1]->setVisible( !mLights[1]->isVisible() );
 		break;
 	case KeyEvent::KEY_3:
+		// Toggle capsule light.
 		mLights[2]->setVisible( !mLights[2]->isVisible() );
 		break;
 	case KeyEvent::KEY_4:
+		// Toggle wedge light.
 		mLights[3]->setVisible( !mLights[3]->isVisible() );
 		break;
 	case KeyEvent::KEY_a:
+		// Toggle light animation.
 		mAnimated = !mAnimated;
 		break;
 	case KeyEvent::KEY_c:
+		// Colorize lights.
 		mLights[0]->setColor( 1, 0, 0 );
 		mLights[1]->setColor( 0, 1, 0 );
 		mLights[2]->setColor( 0, 0, 1 );
 		mLights[3]->setColor( 1, 1, 0 );
 		break;
 	case KeyEvent::KEY_m:
+		// Toggle modulation map.
 		spot->enableModulation( !spot->hasModulation() );
 		break;
 	case KeyEvent::KEY_s:
+		// Toggle shadows.
 		spot->enableShadows( !spot->hasShadows() );
 		break;
 	case KeyEvent::KEY_w:
+		// White lights.
 		mLights[0]->setColor( 1, 1, 1 );
 		mLights[1]->setColor( 1, 1, 1 );
 		mLights[2]->setColor( 1, 1, 1 );
 		mLights[3]->setColor( 1, 1, 1 );
 		break;
 	case KeyEvent::KEY_h:
+		// Toggle hotspot for spot and wedge lights.
 		if( spot->getHotspotRatio() > 0 )
 			spot->setHotspotRatio( 0 );
 		else
@@ -377,6 +414,7 @@ void LightsApp::keyDown( KeyEvent event )
 			wedge->setHotspotRatio( wedge->getSpotRatio() );
 		break;
 	case KeyEvent::KEY_d:
+		// Toggle distance attenuation for spot and wedge lights.
 		if( spot->getAttenuation().y > 0 ) {
 			spot->setAttenuation( 0, 0 );
 			spot->setRange( 100 );
@@ -394,12 +432,14 @@ void LightsApp::keyDown( KeyEvent event )
 			wedge->calcRange();
 		}
 		break;
+	case KeyEvent::KEY_RETURN:
+		// Toggle wireframes.
+		mDebugDraw = !mDebugDraw;
+		break;
 	case KeyEvent::KEY_SPACE:
+		// Reload shader.
 		try {
-			// Shaders.
 			mShader = gl::GlslProg::create( loadAsset( "lighting.vert" ), loadAsset( "lighting.frag" ) );
-
-			// 
 			mRoom->replaceGlslProg( mShader );
 			mObject->replaceGlslProg( mShader );
 		}
@@ -442,4 +482,4 @@ void LightsApp::render( bool onlyShadowCasters )
 	gl::popModelMatrix();
 }
 
-CINDER_APP_NATIVE( LightsApp, RendererGl )
+CINDER_APP_NATIVE( LightsApp, RendererGl( RendererGl::Options().msaa( 4 ) ) )
