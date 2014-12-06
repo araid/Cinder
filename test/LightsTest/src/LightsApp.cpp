@@ -20,7 +20,10 @@ typedef std::shared_ptr<class ShadowMap> ShadowMapRef;
 
 class ShadowMap {
 public:
+	~ShadowMap() {}
+
 	static ShadowMapRef create( int size ) { return ShadowMapRef( new ShadowMap{ size } ); }
+
 	ShadowMap( int size )
 	{
 		reset( size );
@@ -85,6 +88,7 @@ private:
 
 	bool                   mAnimated;
 	bool                   mDebugDraw;
+	bool                   mHardLights;
 };
 
 void LightsApp::prepareSettings( Settings *settings )
@@ -105,17 +109,21 @@ void LightsApp::setup()
 	tfmt.setWrap( GL_REPEAT, GL_REPEAT );
 
 	try {
-		// Shaders.
-		mShader = gl::GlslProg::create( loadAsset( "lighting.vert" ), loadAsset( "lighting.frag" ) );
-		mShaderShadow = gl::context()->getStockShader( gl::ShaderDef() );
-
 		// Textures.
 		mModulationTexture = gl::Texture2d::create( loadImage( loadAsset( "gobo1.png" ) ), tfmt );
 
 		// Buffers.
 		mLightDataBuffer = gl::Ubo::create( 32 * sizeof( Light::Data ), nullptr, GL_DYNAMIC_DRAW );
 		mLightDataBuffer->bindBufferBase( 0 );
+
+		// Shaders.
+		mShader = gl::GlslProg::create( loadAsset( "lighting.vert" ), loadAsset( "lighting.frag" ) );
+		mShaderShadow = gl::context()->getStockShader( gl::ShaderDef() );
+
+		// Uniforms.
 		mShader->uniformBlock( "uLights", 0 );
+		mShader->uniform( "uModulationMap[0]", 1 );
+		mShader->uniform( "uShadowMap[0]", 2 );
 	}
 	catch( const std::exception &e ) {
 		console() << e.what() << std::endl;
@@ -132,7 +140,7 @@ void LightsApp::setup()
 	mObjectShadow = gl::Batch::create( geom::Teapot().subdivisions( 20 ), mShaderShadow );
 
 	// Initialize camera.
-	mCamera.setEyePoint( vec3( 10, 20, 10 ) );
+	mCamera.setEyePoint( vec3( 6, 11, -8 ) );
 	mCamera.setCenterOfInterestPoint( vec3( 0, 1, 0 ) );
 
 	// Create a spot light.
@@ -141,11 +149,11 @@ void LightsApp::setup()
 
 	spot->setPosition( vec3( 0, 9, 0 ) );
 	spot->setDirection( vec3( 0, -1, 0 ) );
-	spot->pointAt( vec3( 0, 1, 0 ) );
+	spot->pointAt( vec3( 0, 1, 5 ) );
 
 	// The color describes the relative intensity of the light for each of the primary colors red, green and blue.
 	// If you want the light to be brighter, change its intensity rather than its color.
-	spot->setColor( 1, 1, 1 );
+	spot->setColor( Color::hex( 0xE68800 ) );
 
 	// The spot ratio determines how wide the (outer) cone of the spot light is. A ratio of 1 means that
 	// it is as wide as it is tall, which equals a spot angle of 45 degrees and a cone angle of 90 degrees.
@@ -155,7 +163,7 @@ void LightsApp::setup()
 	// (although still subject to distance attenuation). Outside it, the intensity will gradually fade
 	// to zero at the outer cone. The hotspot ratio can never exceed the spot ratio. Set them to be equal
 	// if you don't want angular attenuation.
-	spot->setHotspotRatio( 0.9f );
+	spot->setHotspotRatio( 0 );
 
 	// In real life, light intensity decreases exponentially the further away from the light source you are.
 	// To mimic this, you can set distance attenuation parameters. Here, we apply a slight quadratic attenuation
@@ -187,8 +195,8 @@ void LightsApp::setup()
 	// the latter has both an amplitude and a frequency. In this sample, we define a constant rotation.
 	spot->getModulationParams().rotateZ = Light::AnimParam( 0, 0.25f, 0, 0 );
 
-	// Enable modulation and shadow.
-	spot->enableModulation();
+	// Enable (modulation and) shadows.
+	//spot->enableModulation();
 	spot->enableShadows();
 
 	// Create point light.
@@ -196,18 +204,18 @@ void LightsApp::setup()
 	mLights.push_back( point );
 
 	point->setPosition( vec3( -2.5f, 1, -2.5f ) );
-	point->setRange( 15 );
+	point->setRange( 10 );
 	point->setAttenuation( 0, 0.5f );
-	point->setVisible( false );
+	point->setColor( Color::hex( 0x7800CE ) );
 
 	// Create capsule light.
 	CapsuleLightRef capsule = Light::createCapsule();
 	mLights.push_back( capsule );
 
 	capsule->setLengthAndAxis( vec3( 5, 2.5f, -5 ), vec3( -5, 2.5f, -5 ) );
-	capsule->setRange( 5 );
+	capsule->setRange( 10 );
 	capsule->setAttenuation( 0, 1 );
-	capsule->setVisible( false );
+	capsule->setColor( Color::hex( 0xFF004F ) );
 
 	// Create wedge light.
 	WedgeLightRef wedge = Light::createWedge();
@@ -217,8 +225,9 @@ void LightsApp::setup()
 	wedge->pointAt( vec3( 0, 1, 0 ) );
 	wedge->setAttenuation( 0, 0.1f );
 	wedge->setSpotRatio( 0.25f );
+	wedge->setHotspotRatio( 0 );
 	wedge->calcRange();
-	wedge->setVisible( false );
+	wedge->setColor( Color::hex( 0x00AC6B ) );
 
 	// Create directional light.
 	DirectionalLightRef directional = Light::createDirectional();
@@ -226,6 +235,7 @@ void LightsApp::setup()
 
 	directional->setDirection( vec3( 3, -2, -1 ) );
 	directional->setIntensity( 0.1f );
+	directional->setColor( Color::hex( 0x004D95 ) );
 
 	// Create shadow map.
 	mShadowMap = ShadowMap::create( 2048 );
@@ -235,6 +245,7 @@ void LightsApp::setup()
 
 	mAnimated = false;
 	mDebugDraw = false;
+	mHardLights = false;
 }
 
 void LightsApp::update()
@@ -314,8 +325,6 @@ void LightsApp::draw()
 		// Update shader uniforms.
 		gl::ScopedGlslProg shader( mShader );
 		mShader->uniform( "uLightCount", numVisible );
-		mShader->uniform( "uModulationMap[0]", 1 );
-		mShader->uniform( "uShadowMap[0]", 2 );
 		mShader->uniform( "uSkyDirection", mCamera.getViewMatrix() * vec4( 0, 1, 0, 0 ) );
 
 		// Bind textures and render.
@@ -395,11 +404,11 @@ void LightsApp::keyDown( KeyEvent event )
 		break;
 	case KeyEvent::KEY_c:
 		// Colorize lights.
-		spot->setColor( 0, 1, 0 );
-		point->setColor( 1, 1, 1 );
-		capsule->setColor( 1, 0, 1 );
-		wedge->setColor( 1, 1, 0 );
-		directional->setColor( 0, 1, 1 );
+		spot->setColor( Color::hex( 0xE68800 ) );
+		point->setColor( Color::hex( 0x7800CE ) );
+		capsule->setColor( Color::hex( 0xFF004F ) );
+		wedge->setColor( Color::hex( 0x00AC6B ) );
+		directional->setColor( Color::hex( 0x004D95 ) );
 		break;
 	case KeyEvent::KEY_m:
 		// Toggle modulation map.
@@ -427,20 +436,21 @@ void LightsApp::keyDown( KeyEvent event )
 		break;
 	case KeyEvent::KEY_d:
 		// Toggle distance attenuation for spot and wedge lights.
-		if( spot->getAttenuation().y > 0 ) {
+		mHardLights = !mHardLights;
+		if( mHardLights ) {
+			point->setAttenuation( 0.5f, 0 );
+			capsule->setAttenuation( 0.5f, 0 );
 			spot->setAttenuation( 0, 0 );
-			spot->setRange( 100 );
-		}
-		else {
-			spot->setAttenuation( 0, 0.04f );
-			spot->calcRange();
-		}
-		if( wedge->getAttenuation().y > 0 ) {
 			wedge->setAttenuation( 0, 0 );
+			spot->setRange( 100 );
 			wedge->setRange( 100 );
 		}
 		else {
+			point->setAttenuation( 0, 0.5f );
+			capsule->setAttenuation( 0, 0.5f );
+			spot->setAttenuation( 0, 0.04f );
 			wedge->setAttenuation( 0, 0.04f );
+			spot->calcRange();
 			wedge->calcRange();
 		}
 		break;
@@ -452,6 +462,13 @@ void LightsApp::keyDown( KeyEvent event )
 		// Reload shader.
 		try {
 			mShader = gl::GlslProg::create( loadAsset( "lighting.vert" ), loadAsset( "lighting.frag" ) );
+
+			// Uniforms.
+			mShader->uniformBlock( "uLights", 0 );
+			mShader->uniform( "uModulationMap[0]", 1 );
+			mShader->uniform( "uShadowMap[0]", 2 );
+
+			// Batches.
 			mRoom->replaceGlslProg( mShader );
 			mObject->replaceGlslProg( mShader );
 		}

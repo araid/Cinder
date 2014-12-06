@@ -76,7 +76,24 @@ Light::Data PointLight::getData( double time, const mat4 &transform ) const
 	params.range = mRange;
 	params.attenuation = getAttenuation();
 
+	params.shadowIndex = mShadowIndex;
+
 	return params;
+}
+
+void PointLight::updateMatrices() const
+{
+	if( mIsDirty ) {
+		mViewMatrix[POSITIVE_X] = glm::lookAt( mPosition, vec3( 1, 0, 0 ), vec3( 0, -1, 0 ) );
+		mViewMatrix[NEGATIVE_X] = glm::lookAt( mPosition, vec3( -1, 0, 0 ), vec3( 0, -1, 0 ) );
+		mViewMatrix[POSITIVE_Y] = glm::lookAt( mPosition, vec3( 0, 1, 0 ), vec3( 0, 0, -1 ) );
+		mViewMatrix[NEGATIVE_Y] = glm::lookAt( mPosition, vec3( 0, -1, 0 ), vec3( 0, 0, 1 ) );
+		mViewMatrix[POSITIVE_Z] = glm::lookAt( mPosition, vec3( 0, 0, 1 ), vec3( 0, -1, 0 ) );
+		mViewMatrix[NEGATIVE_Z] = glm::lookAt( mPosition, vec3( 0, 0, -1 ), vec3( 0, -1, 0 ) );
+		mProjectionMatrix = glm::perspective( glm::radians( 90.0f ), 1.0f, 0.1f, mRange );
+
+		mIsDirty = false;
+	}
 }
 
 Light::Data CapsuleLight::getData( double time, const mat4 &transform ) const

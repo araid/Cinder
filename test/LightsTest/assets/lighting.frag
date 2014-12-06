@@ -114,14 +114,15 @@ void main(void)
 	for( int i=0; i<uLightCount; ++i )
 	{
 		// Fetch light type.
-		int type = uLight[i].flags & 0xF;
+		int flags = uLight[i].flags;
+		int type = flags & 0xF;
 
 		bool isDirectional = ( type == 0 );
 		bool isSpotOrWedge = ( type & 0xC ) > 0;
 		bool isLinearLight = ( type & 0xA ) > 0;
 
-		bool hasShadows = ( uLight[i].flags & 0x20 ) > 0;
-		bool hasModulation = ( uLight[i].flags & 0x10 ) > 0;
+		bool hasShadows = ( flags & 0x20 ) > 0;
+		bool hasModulation = ( flags & 0x10 ) > 0;
 
 		// Calculate shadow.
 		float shadow = 1.0;

@@ -237,6 +237,9 @@ typedef std::shared_ptr<class PointLight> PointLightRef;
 
 class PointLight : public Light, public ILightPosition, public ILightRange, public ILightAttenuation {
 public:
+	typedef enum Face { POSITIVE_X = 0, NEGATIVE_X, POSITIVE_Y, NEGATIVE_Y, POSITIVE_Z, NEGATIVE_Z };
+
+public:
 	virtual ~PointLight() {}
 
 	static std::shared_ptr<PointLight> create() { return PointLightRef( new PointLight ); }
@@ -249,16 +252,16 @@ public:
 
 	const vec3& getPosition() const override { return mPosition; }
 	vec3 getPosition( const mat4& transform ) const override { return vec3( transform * vec4( mPosition, 1 ) ); }
-	void setPosition( const vec3& worldPosition ) override { mPosition = worldPosition; }
+	void setPosition( const vec3& worldPosition ) override { mPosition = worldPosition; mIsDirty = true; }
 
 	/*! Returns the range of the light, which is a function of the intensity and the distance attenuation.
 		Surfaces beyond the range do not receive any light.*/
 	float getRange() const override { return mRange; }
 	/*! Adjust the intensity of the light, based on the current distance attenuation parameters, so that surfaces beyond the range do not receive any light.*/
-	void setRange( float range ) override { mRange = range; }
+	void setRange( float range ) override { mRange = range; mIsDirty = true; }
 
 	//! Calculates the range of the light, based on the intensity and distance attenuation. Returns TRUE on success.
-	bool calcRange( float threshold = 2.0f / 255.0f ) override { return Light::calcRange( mIntensity, mAttenuation, &mRange, threshold ); }
+	bool calcRange( float threshold = 2.0f / 255.0f ) override { mIsDirty = true; return Light::calcRange( mIntensity, mAttenuation, &mRange, threshold ); }
 	//! Calculates the required intensity of the light for the light's range and attenuation. Returns TRUE on success.
 	bool calcIntensity( float threshold = 2.0f / 255.0f ) override { return Light::calcIntensity( mRange, mAttenuation, &mIntensity, threshold ); }
 
@@ -269,16 +272,38 @@ public:
 	//! Set \a constant, \a linear and \a quadratic distance attenuation. 
 	void setAttenuation( float linear, float quadratic ) override { setAttenuation( vec2( linear, quadratic ) ); }
 
+	//! Returns the light's view matrix for the specified cube map face. The cube is axis aligned in world space.
+	const mat4& getViewMatrix( Face face ) const { updateMatrices(); return mViewMatrix[(int) face]; }
+	//! Returns the light's projection matrix.
+	const mat4& getProjectionMatrix() const { updateMatrices(); return mProjectionMatrix; }
+
+	//! Returns the shadow map index. The index can be used to access an array of samplers in your shader.
+	uint8_t getShadowIndex() const { return mShadowIndex; }
+	//! Set the shadow map index. The index can be used to access an array of samplers in your shader.
+	void setShadowIndex( uint8_t index ) { mShadowIndex = index; }
+
+	//! Enables or disables shadow casting for this light.
+	void enableShadows( bool enabled = true ) { if( enabled ) mFlags |= Data::ShadowEnabled; else mFlags &= ~Data::ShadowEnabled; }
+
 protected:
 	PointLight()
 		: PointLight( Point ) {}
 	PointLight( Type type )
-		: Light( type ), mPosition( 0 ), mRange( 100 ), mAttenuation( 0 ) {}
+		: Light( type ), mPosition( 0 ), mRange( 100 ), mAttenuation( 0 ), mShadowIndex( 0 ), mIsDirty( true ) {}
+
+private:
+	void updateMatrices() const;
 
 protected:
 	vec3       mPosition;
 	float      mRange;
 	vec2       mAttenuation;
+
+	uint8_t    mShadowIndex;
+
+	mutable bool       mIsDirty;
+	mutable mat4       mViewMatrix[6];
+	mutable mat4       mProjectionMatrix;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -430,12 +455,22 @@ public:
 	//! Returns a matrix that converts world coordinates to modulation map coordinates.
 	mat4 getModulationMatrix( double time ) const;
 
+	//! Returns the shadow map index. The index can be used to access an array of samplers in your shader.
+	uint8_t getShadowIndex() const { return mShadowIndex; }
+	//! Set the shadow map index. The index can be used to access an array of samplers in your shader.
+	void setShadowIndex( uint8_t index ) { mShadowIndex = index; }
+
 	//! Returns the modulation map animation parameters.
 	const ModulationParams& getModulationParams() const { return mModulationParams; }
 	//! Returns the modulation map animation parameters.
 	ModulationParams& getModulationParams() { return mModulationParams; }
 	//! Set the modulation map animation parameters.
 	void setModulationParams( const ModulationParams &params ) { mModulationParams = params; }
+
+	//! Returns the modulation map index. The index can be used to access an array of samplers in your shader.
+	uint8_t getModulationIndex() const { return mModulationIndex; }
+	//! Set the modulation map index. The index can be used to access an array of samplers in your shader.
+	void setModulationIndex( uint8_t index ) { mModulationIndex = index; }
 
 	//! Enables or disables shadow casting for this light.
 	void enableShadows( bool enabled = true ) { if( enabled ) mFlags |= Data::ShadowEnabled; else mFlags &= ~Data::ShadowEnabled; }

@@ -83,10 +83,11 @@ void Sketch::light( const LightRef& light )
 	{
 		const SpotLightRef ref = std::static_pointer_cast<SpotLight>( light );
 		float range = ref->getRange() * glm::inversesqrt( 1.0f + glm::pow( ref->getSpotRatio(), 2.0f ) );
+		float radius = range * ref->getSpotRatio();
 		const vec3& position = ref->getPosition();
 		const vec3& lookat = position + range * ref->getDirection();
-		cone( position, lookat, ref->getSpotRatio() );
-		cap( lookat, range * ref->getSpotRatio(), position );
+		cylinder( position, lookat, 0, radius );
+		cap( lookat, radius, position );
 	}
 		break;
 	case Light::Wedge:
