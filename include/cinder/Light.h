@@ -97,20 +97,23 @@ public:
 	//! This structure should be tightly packed and conform to the std140 layout as defined in the shader!!
 	struct Data {
 		Data()
-			: intensity( 1 ), direction( 0, -1, 0 ), range( 100 ), length( 0 ), color( 1 ), angle( 1 ) {}
+			: intensity( 1 ), direction( 0, -1, 0 ), range( 100 ), width( 0 ), height( 0 ), color( 1 ), angle( 1 ) {}
 
 		vec3   position;
 		float  intensity;
 		vec3   direction;			// normalized
 		float  range;
-		vec4   length;				// xyz = direction, w = length (capsule and wedge only)
+		vec3   horizontal;			// normalized direction of horizontal size (linear and area lights)
+		float  width;
+		vec3   vertical;			// normalized direction of vertical size (area lights)
+		float  height;
 		vec4   color;				// x = red, y = green, z = blue, w = luminance
 		vec2   attenuation;			// x = linear coefficient, y = quadratic coefficient
 		vec2   angle;				// x = cos(outer angle), y = cos(inner angle)
 		mat4   shadowMatrix;		// converts to shadow map space
 		mat4   modulationMatrix;	// converts to modulation map space
-		int    shadowIndex;			// index into an array of sampler2DShadow samplers
-		int    modulationIndex;		// index into an array of sampler2D samplers
+		int    shadowIndex;			// index into an array of shadow samplers
+		int    modulationIndex;		// index into an array of texture samplers
 		int    flags;				// 0-3 = light type, 4 = modulation enabled, 5 = shadow enabled
 		int    reserved;
 

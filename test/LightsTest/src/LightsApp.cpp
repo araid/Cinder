@@ -291,16 +291,14 @@ void LightsApp::draw()
 
 	// Render shadow map.
 	if( mLights[0]->isVisible() ) {
+		const SpotLightRef spot = static_pointer_cast<SpotLight>( mLights[0] );
+
 		gl::ScopedFramebuffer shadowmap( mShadowMap->getFbo() );
 		gl::ScopedViewport viewport( ivec2( 0 ), mShadowMap->getSize() );
 
 		gl::clear();
-
 		gl::pushMatrices();
-
-		// TODO: pfffff....
-		const SpotLightRef spot = static_pointer_cast<SpotLight>( mLights[0] );
-		gl::setMatrices( *spot.get() );
+		gl::setMatrices( *spot );
 
 		render( true );
 	}

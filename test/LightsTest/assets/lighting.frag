@@ -6,7 +6,10 @@ struct LightData
 	float intensity;
 	vec3  direction;
 	float range;
-	vec4  length;
+	vec3  horizontal;
+	float width;
+	vec3  vertical;
+	float height;
 	vec4  color;
 	vec2  attenuation;
 	vec2  angle;
@@ -145,7 +148,7 @@ void main(void)
 
 		// Calculate end-points of the light for convenience.
 		vec3 p0 = uLight[i].position.xyz;
-		vec3 p1 = uLight[i].position.xyz + uLight[i].length.w * uLight[i].length.xyz;
+		vec3 p1 = uLight[i].position.xyz + uLight[i].width * uLight[i].horizontal;
 
 		// Calculate direction and distance to light.
 		float distance = 1.0;
@@ -153,7 +156,7 @@ void main(void)
 
 		if( !isDirectional ) 
 		{
-			vec3 lightPosition = p0 + clamp( dot( uLight[i].length.xyz, vertPosition.xyz - p0 ), 0.0, uLight[i].length.w ) * uLight[i].length.xyz;
+			vec3 lightPosition = p0 + clamp( dot( uLight[i].horizontal, vertPosition.xyz - p0 ), 0.0, uLight[i].width ) * uLight[i].horizontal;
 			L = lightPosition - vertPosition.xyz; distance = length( L ); L /= distance;
 		}
 

@@ -63,7 +63,7 @@ Light::Data DirectionalLight::getData( double time, const mat4 &transform ) cons
 {
 	// Populate the LightData structure.
 	Light::Data params = Light::getData( time, transform );
-	params.direction = glm::normalize( vec3( transform * vec4( mDirection, 0 ) ) );
+	params.direction = glm::normalize( mat3( transform ) * mDirection );
 
 	return params;
 }
@@ -106,8 +106,8 @@ Light::Data CapsuleLight::getData( double time, const mat4 &transform ) const
 	params.position = vec3( transform * vec4( position, 1 ) );
 	params.range = mRange;
 	params.attenuation = mAttenuation;
-	params.length = transform * vec4( mAxis, 0 );
-	params.length.w = mLength;
+	params.horizontal = glm::normalize( mat3( transform ) * mAxis );
+	params.width = mLength;
 
 	return params;
 }
@@ -117,7 +117,7 @@ Light::Data SpotLight::getData( double time, const mat4 &transform ) const
 	// Populate the LightData structure.
 	Light::Data params = Light::getData( time, transform );
 	params.position = vec3( transform * vec4( mPosition, 1 ) );
-	params.direction = glm::normalize( vec3( transform * vec4( mDirection, 0 ) ) );
+	params.direction = glm::normalize( mat3( transform ) * mDirection );
 	params.range = mRange;
 	params.attenuation = getAttenuation();
 	params.angle = getConeParams();
@@ -174,9 +174,9 @@ Light::Data WedgeLight::getData( double time, const mat4 &transform ) const
 	// Populate the LightData structure.
 	Light::Data params = Light::getData( time, transform );
 	params.position = vec3( transform * vec4( position, 1 ) );
-	params.direction = glm::normalize( vec3( transform * vec4( mDirection, 0 ) ) );
-	params.length = transform * vec4( mAxis, 0 );
-	params.length.w = mLength;
+	params.direction = glm::normalize( mat3( transform ) * mDirection );
+	params.horizontal = glm::normalize( mat3( transform ) * mAxis );
+	params.width = mLength;
 	params.range = mRange;
 	params.attenuation = getAttenuation();
 	params.angle = getConeParams();
