@@ -254,9 +254,9 @@ void LightsApp::update()
 	if( mAnimated ) {
 		float t = 0.25f * float( getElapsedSeconds() );
 
-		float x = 20.0f * math<float>::cos( 3.5f * t );
-		float y = 1.0f + math<float>::sin( 0.3f * t );
-		float z = 20.0f * math<float>::sin( t );
+		float x = 5.0f * math<float>::cos( 2.7f * t );
+		float y = 5.0f + 4.0f * math<float>::sin( 0.4f * t );
+		float z = 5.0f * math<float>::cos( t );
 		dynamic_pointer_cast<SpotLight>( mLights[0] )->pointAt( vec3( x, y, z ) );
 		dynamic_pointer_cast<WedgeLight>( mLights[3] )->pointAt( vec3( x, y, z ) );
 
