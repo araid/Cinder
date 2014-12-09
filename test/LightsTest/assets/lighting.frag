@@ -72,12 +72,12 @@ float calcShadowPCF4x4( in sampler2DShadow map, in vec4 sc )
 	return shadow * (1.0 / 16.0);
 }
 
-float calcSpotAngularAttenuation( in vec3 L, in vec3 D, in vec2 cutoffs )
+float calcAngularAttenuation( in vec3 L, in vec3 D, in vec2 cutoffs )
 {
 	return smoothstep( cutoffs.x, cutoffs.y, dot( -D, L ) );
 }
 
-float calcSpotDistanceAttenuation( in float distance, in vec2 coeffs )
+float calcDistanceAttenuation( in float distance, in vec2 coeffs )
 {
 	return 1.0 / ( 1.0 + distance * coeffs.x + distance * distance * coeffs.y );
 }
@@ -94,11 +94,28 @@ vec3 calcRepresentativePoint( in vec3 p0, in vec3 p1, in vec3 v, in vec3 r )
 	return p0 + saturate( t ) * (p1 - p0);
 }
 
+// Scattering Implementation (currently only point lights are supported)
+// See code From Miles Macklin: http://blog.mmacklin.com/2010/05/29/in-scattering-demo/
+float calcScattering( vec3 vertPos, vec3 lightPos )
+{
+	vec3 r = vertPos - vec3( 0 );
+	vec3 q = vec3( 0 ) - lightPos;
+	
+	float b = dot( normalize( r ), q );
+	float c = dot( q, q );
+	float d = -r.z; // length( r );
+	
+	// Evaluate integral.
+	float s = inversesqrt( c - b * b );	
+	return s * ( atan( ( d + b ) * s ) - atan( b * s ) );
+}
+
 void main(void)
 {
-	const vec3  materialDiffuseColor = vec3( 1 );
-	const vec3  materialSpecularColor = vec3( 1 );
-	const float materialShininess = 100.0;
+	const vec3  kMaterialDiffuseColor = vec3( 1 );
+	const vec3  kMaterialSpecularColor = vec3( 1 );
+	const float kMaterialShininess = 100.0;
+	const float kAtmosphericScattering = 0.025;
 
 	// Initialize ambient, diffuse and specular colors.
 	vec3 ambient = vec3( 0 );
@@ -111,7 +128,7 @@ void main(void)
 
 	// Hemispherical ambient lighting.
 	float hemi = 0.5 + 0.5 * dot( uSkyDirection.xyz, N );
-	ambient = mix( vec3( 0 ), vec3( 0.01 ), hemi ) * materialDiffuseColor;
+	ambient = mix( vec3( 0 ), vec3( 0.01 ), hemi ) * kMaterialDiffuseColor;
 
 	// Calculate lighting.
 	for( int i=0; i<uLightCount; ++i )
@@ -121,6 +138,7 @@ void main(void)
 		int type = flags & 0xF;
 
 		bool isDirectional = ( type == 0 );
+		bool isSpotOrPoint = ( type & 0x5 ) > 0;
 		bool isSpotOrWedge = ( type & 0xC ) > 0;
 		bool isLinearLight = ( type & 0xA ) > 0;
 
@@ -133,9 +151,6 @@ void main(void)
 		{
 			vec4 shadowCoord = uLight[i].shadowMatrix * vertPosition;
 			shadow = calcShadowPCF4x4( uShadowMap[ uLight[i].shadowIndex ], shadowCoord );
-
-			if( shadow == 0.0 )
-				continue;
 		}
 
 		// Calculate modulation.
@@ -147,52 +162,59 @@ void main(void)
 		}
 
 		// Calculate end-points of the light for convenience.
-		vec3 p0 = uLight[i].position.xyz;
-		vec3 p1 = uLight[i].position.xyz + uLight[i].width * uLight[i].horizontal;
+		vec3 p0 = uLight[i].position;
+		vec3 p1 = uLight[i].position + uLight[i].width * uLight[i].horizontal;
 
 		// Calculate direction and distance to light.
 		float distance = 1.0;
-		vec3 L = -uLight[i].direction;
+		vec3  lightPosition = uLight[i].position;
+		vec3  L = -uLight[i].direction;
 
 		if( !isDirectional ) 
 		{
-			vec3 lightPosition = p0 + clamp( dot( uLight[i].horizontal, vertPosition.xyz - p0 ), 0.0, uLight[i].width ) * uLight[i].horizontal;
+			lightPosition += clamp( dot( vertPosition.xyz - lightPosition, uLight[i].horizontal ), 0.0, uLight[i].width ) * uLight[i].horizontal;
 			L = lightPosition - vertPosition.xyz; distance = length( L ); L /= distance;
 		}
 
 		// Calculate attenuation.
-		float angularAttenuation = mix( 1.0, calcSpotAngularAttenuation( L, uLight[i].direction, uLight[i].angle ), isSpotOrWedge );
-		float distanceAttenuation = mix( 1.0, calcSpotDistanceAttenuation( distance, uLight[i].attenuation ), !isDirectional );
+		float angularAttenuation = mix( 1.0, calcAngularAttenuation( L, uLight[i].direction, uLight[i].angle ), isSpotOrWedge );
+		float distanceAttenuation = mix( 1.0, calcDistanceAttenuation( distance, uLight[i].attenuation ), !isDirectional );
 		vec3  colorAttenuation = modulation * uLight[i].color.rgb * uLight[i].intensity;
 
 		// Calculate diffuse color (clamp it to the light's range).
 		float lambert = max( 0.0, dot( N, L ) );
 		float range = mix( 1.0, step( distance, uLight[i].range ), !isDirectional );
-		diffuse += shadow * range * colorAttenuation * distanceAttenuation * angularAttenuation * lambert * materialDiffuseColor;
+		diffuse += shadow * range * colorAttenuation * distanceAttenuation * angularAttenuation * lambert * kMaterialDiffuseColor;
 
 		// Calculate representative light vector (for linear lights only).
 		if( isLinearLight ) {
-			vec3 lightPosition = calcRepresentativePoint( p0, p1, vertPosition.xyz, -reflect( E, N ) );
+			lightPosition = calcRepresentativePoint( uLight[i].position, uLight[i].position + uLight[i].width * uLight[i].horizontal, vertPosition.xyz, -reflect( E, N ) );
 			L = lightPosition - vertPosition.xyz; distance = length( L ); L /= distance;
-		
-			// Adjust distance attenuation.
-			distanceAttenuation = calcSpotDistanceAttenuation( distance, uLight[i].attenuation );
+
+			distanceAttenuation = calcDistanceAttenuation( distance, uLight[i].attenuation );
+		} 
+
+		// Calculate light Scattering.
+		if( isSpotOrPoint )
+		{
+			float scatter = calcScattering( vertPosition.xyz, lightPosition );
+			diffuse += kAtmosphericScattering * scatter * uLight[i].color.rgb * uLight[i].intensity;
 		}
 
 		// Calculate specular color.
 #define USE_BLINN_PHONG 1
 #if USE_BLINN_PHONG
-		const float normalization = ( materialShininess + 8.0 ) / ( 3.14159265 * 8.0 );		
+		const float normalization = ( kMaterialShininess + 8.0 ) / ( 3.14159265 * 8.0 );		
 		
 		vec3 H = normalize( L + E );
-		float reflection = normalization * pow( max( 0.0, dot( N, H ) ), materialShininess );
-		specular += colorAttenuation * distanceAttenuation * angularAttenuation * reflection * materialSpecularColor;
+		float reflection = normalization * pow( max( 0.0, dot( N, H ) ), kMaterialShininess );
+		specular += colorAttenuation * distanceAttenuation * angularAttenuation * reflection * kMaterialSpecularColor;
 #else
-		const float normalization = ( materialShininess + 2.0 ) / ( 3.14159265 * 2.0 );
+		const float normalization = ( kMaterialShininess + 2.0 ) / ( 3.14159265 * 2.0 );
 
 		vec3 R = normalize( -reflect( L, N ) );
-		float reflection = normalization * pow( max( 0.0, dot( R, E ) ), materialShininess );
-		specular += colorAttenuation * distanceAttenuation * angularAttenuation * reflection * materialSpecularColor;
+		float reflection = normalization * pow( max( 0.0, dot( R, E ) ), kMaterialShininess );
+		specular += colorAttenuation * distanceAttenuation * angularAttenuation * reflection * kMaterialSpecularColor;
 #endif
 	}
 

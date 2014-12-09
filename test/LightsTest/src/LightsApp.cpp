@@ -86,7 +86,8 @@ private:
 
 	mat4                   mTransform;
 
-	bool                   mAnimated;
+	bool                   mAnimateObject;
+	bool                   mAnimateLights;
 	bool                   mDebugDraw;
 	bool                   mHardLights;
 };
@@ -128,6 +129,7 @@ void LightsApp::setup()
 	catch( const std::exception &e ) {
 		console() << e.what() << std::endl;
 		quit();
+		return;
 	}
 
 	// Create 3D room using a box and then flipping the normals. This is only required if the shader is actually using normals.
@@ -203,7 +205,7 @@ void LightsApp::setup()
 	PointLightRef point = Light::createPoint();
 	mLights.push_back( point );
 
-	point->setPosition( vec3( -2.5f, 1, -2.5f ) );
+	point->setPosition( vec3( -2.5f, 2, -2.5f ) );
 	point->setRange( 10 );
 	point->setAttenuation( 0, 0.5f );
 	point->setColor( Color::hex( 0x7800CE ) );
@@ -243,7 +245,8 @@ void LightsApp::setup()
 	// Create debug sketch.
 	mSketch = gl::Sketch::create( false );
 
-	mAnimated = false;
+	mAnimateObject = true;
+	mAnimateLights = false;
 	mDebugDraw = false;
 	mHardLights = false;
 }
@@ -251,7 +254,7 @@ void LightsApp::setup()
 void LightsApp::update()
 {
 	// Animate light sources.
-	if( mAnimated ) {
+	if( mAnimateLights ) {
 		float t = 0.25f * float( getElapsedSeconds() );
 
 		float x = 5.0f * math<float>::cos( 2.7f * t );
@@ -260,15 +263,22 @@ void LightsApp::update()
 		dynamic_pointer_cast<SpotLight>( mLights[0] )->pointAt( vec3( x, y, z ) );
 		dynamic_pointer_cast<WedgeLight>( mLights[3] )->pointAt( vec3( x, y, z ) );
 
+		x = 5.0f * cosf( t );
+		y = 2.5f + 2.5f * cosf( t );
+		z = 5.0f * sinf( t );
+		dynamic_pointer_cast<PointLight>( mLights[1] )->setPosition( vec3( x, y, z ) );
+
 		x = 5.0f * math<float>::cos( t );
 		z = 5.0f * math<float>::sin( t );
 		dynamic_pointer_cast<CapsuleLight>( mLights[2] )->setLengthAndAxis( vec3( 5.0f + x, 2.5f, z ), vec3( 5.0f - x, 2.5f, -z ) );
 	}
 
 	// Animate object.
-	mTransform = glm::translate( vec3( 0, 1.5f, 0 ) );
-	mTransform *= glm::rotate( float( getElapsedSeconds() ), glm::normalize( vec3( 0.1f, 0.5f, 0.2f ) ) );
-	mTransform *= glm::scale( vec3( 3.0f ) );
+	if( mAnimateObject ) {
+		mTransform = glm::translate( vec3( 0, 1.5f, 0 ) );
+		mTransform *= glm::rotate( float( getElapsedSeconds() ), glm::normalize( vec3( 0.1f, 0.5f, 0.2f ) ) );
+		mTransform *= glm::scale( vec3( 3.0f ) );
+	}
 
 	// Update debug sketch.
 	mSketch->clear();
@@ -398,7 +408,11 @@ void LightsApp::keyDown( KeyEvent event )
 		break;
 	case KeyEvent::KEY_a:
 		// Toggle light animation.
-		mAnimated = !mAnimated;
+		mAnimateLights = !mAnimateLights;
+		break;
+	case KeyEvent::KEY_o:
+		// Toggle object animation.
+		mAnimateObject = !mAnimateObject;
 		break;
 	case KeyEvent::KEY_c:
 		// Colorize lights.
