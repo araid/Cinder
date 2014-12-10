@@ -41,6 +41,12 @@ float saturate( in float v )
 	return clamp( v, 0.0, 1.0 );
 }
 
+float calcShadow( in sampler2DShadow map, in vec4 sc )
+{
+	sc.z -= 0.001; // Apply shadow bias.
+	return textureProj( map, sc );
+}
+
 float calcShadowPCF4x4( in sampler2DShadow map, in vec4 sc )
 {
 	const int r = 2;
@@ -82,16 +88,16 @@ float calcDistanceAttenuation( in float distance, in vec2 coeffs )
 	return 1.0 / ( 1.0 + distance * coeffs.x + distance * distance * coeffs.y );
 }
 
-vec3 calcRepresentativePoint( in vec3 p0, in vec3 p1, in vec3 v, in vec3 r )
+vec3 calcRepresentativePoint( in vec3 lightStart, in vec3 lightEnd, in vec3 v, in vec3 r )
 {
 	// See: http://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf (page 17)
-	vec3 l0 = p0 - v;
-	vec3 l1 = p1 - v;
+	vec3 l0 = lightStart - v;
+	vec3 l1 = lightEnd - v;
 	vec3 ld = l1 - l0;
 	float a = dot( r, ld );
 	float t = ( dot( r, l0 ) * a - dot( l0, ld ) ) / ( dot( ld, ld ) - a * a );
 
-	return p0 + saturate( t ) * (p1 - p0);
+	return lightStart + saturate( t ) * (lightEnd - lightStart);
 }
 
 // Scattering Implementation (currently only point lights are supported)
@@ -106,7 +112,7 @@ float calcScattering( vec3 vertPos, vec3 lightPos )
 	float d = -r.z; // length( r );
 	
 	// Evaluate integral.
-	float s = inversesqrt( c - b * b );	
+	float s = inversesqrt( max( 0.0001, c - b * b ) );	
 	return s * ( atan( ( d + b ) * s ) - atan( b * s ) );
 }
 
@@ -115,7 +121,7 @@ void main(void)
 	const vec3  kMaterialDiffuseColor = vec3( 1 );
 	const vec3  kMaterialSpecularColor = vec3( 1 );
 	const float kMaterialShininess = 100.0;
-	const float kAtmosphericScattering = 0.025;
+	const float kAtmosphericScattering = 0.05;
 
 	// Initialize ambient, diffuse and specular colors.
 	vec3 ambient = vec3( 0 );
@@ -162,44 +168,46 @@ void main(void)
 		}
 
 		// Calculate end-points of the light for convenience.
-		vec3 p0 = uLight[i].position;
-		vec3 p1 = uLight[i].position + uLight[i].width * uLight[i].horizontal;
+		vec3 lightStart = uLight[i].position;
+		vec3 lightEnd   = uLight[i].position + uLight[i].width * uLight[i].horizontal;
+		vec3 lightColor = uLight[i].color.rgb * uLight[i].intensity;
 
 		// Calculate direction and distance to light.
 		float distance = 1.0;
-		vec3  lightPosition = uLight[i].position;
 		vec3  L = -uLight[i].direction;
 
 		if( !isDirectional ) 
 		{
-			lightPosition += clamp( dot( vertPosition.xyz - lightPosition, uLight[i].horizontal ), 0.0, uLight[i].width ) * uLight[i].horizontal;
+			float t = clamp( dot( vertPosition.xyz - lightStart, uLight[i].horizontal ), 0.0, uLight[i].width );
+			vec3 lightPosition = lightStart + t * uLight[i].horizontal;
 			L = lightPosition - vertPosition.xyz; distance = length( L ); L /= distance;
 		}
 
 		// Calculate attenuation.
 		float angularAttenuation = mix( 1.0, calcAngularAttenuation( L, uLight[i].direction, uLight[i].angle ), isSpotOrWedge );
 		float distanceAttenuation = mix( 1.0, calcDistanceAttenuation( distance, uLight[i].attenuation ), !isDirectional );
-		vec3  colorAttenuation = modulation * uLight[i].color.rgb * uLight[i].intensity;
+		vec3  colorAttenuation = modulation * lightColor;
 
 		// Calculate diffuse color (clamp it to the light's range).
 		float lambert = max( 0.0, dot( N, L ) );
 		float range = mix( 1.0, step( distance, uLight[i].range ), !isDirectional );
 		diffuse += shadow * range * colorAttenuation * distanceAttenuation * angularAttenuation * lambert * kMaterialDiffuseColor;
 
+		// Calculate light Scattering.
+		if( !isDirectional )
+		{
+			vec3 lightPosition = calcRepresentativePoint( lightStart, lightEnd, vertPosition.xyz, -E );
+			float scatter = calcScattering( vertPosition.xyz, lightPosition );
+			diffuse += kAtmosphericScattering * scatter * lightColor;
+		}
+
 		// Calculate representative light vector (for linear lights only).
 		if( isLinearLight ) {
-			lightPosition = calcRepresentativePoint( uLight[i].position, uLight[i].position + uLight[i].width * uLight[i].horizontal, vertPosition.xyz, -reflect( E, N ) );
+			vec3 lightPosition = calcRepresentativePoint( lightStart, lightEnd, vertPosition.xyz, -reflect( E, N ) );
 			L = lightPosition - vertPosition.xyz; distance = length( L ); L /= distance;
 
 			distanceAttenuation = calcDistanceAttenuation( distance, uLight[i].attenuation );
 		} 
-
-		// Calculate light Scattering.
-		if( isSpotOrPoint )
-		{
-			float scatter = calcScattering( vertPosition.xyz, lightPosition );
-			diffuse += kAtmosphericScattering * scatter * uLight[i].color.rgb * uLight[i].intensity;
-		}
 
 		// Calculate specular color.
 #define USE_BLINN_PHONG 1

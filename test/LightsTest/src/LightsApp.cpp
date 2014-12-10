@@ -178,7 +178,7 @@ void LightsApp::setup()
 	// intensity and range separately for ease of use. Try to keep the range as small as possible,
 	// because this will increase shadow quality and performance.
 	spot->setRange( 100 );
-	spot->setIntensity( 2 );
+	spot->setIntensity( 3 );
 
 	// If you want to make sure that the intensity will be zero at the specified range and distance attenuation,
 	// you can use the 'calcIntensity' function to calculate it for you. You can optionally supply a threshold,
@@ -207,7 +207,7 @@ void LightsApp::setup()
 
 	point->setPosition( vec3( -2.5f, 2, -2.5f ) );
 	point->setRange( 10 );
-	point->setAttenuation( 0, 0.5f );
+	point->setAttenuation( 0, 1 );
 	point->setColor( Color::hex( 0x7800CE ) );
 
 	// Create capsule light.
@@ -230,6 +230,7 @@ void LightsApp::setup()
 	wedge->setHotspotRatio( 0 );
 	wedge->calcRange();
 	wedge->setColor( Color::hex( 0x00AC6B ) );
+	wedge->setIntensity( 3 );
 
 	// Create directional light.
 	DirectionalLightRef directional = Light::createDirectional();
@@ -258,10 +259,13 @@ void LightsApp::update()
 		float t = 0.25f * float( getElapsedSeconds() );
 
 		float x = 5.0f * math<float>::cos( 2.7f * t );
-		float y = 5.0f + 4.0f * math<float>::sin( 0.4f * t );
+		float y = 4.0f * math<float>::sin( 0.4f * t );
 		float z = 5.0f * math<float>::cos( t );
-		dynamic_pointer_cast<SpotLight>( mLights[0] )->pointAt( vec3( x, y, z ) );
-		dynamic_pointer_cast<WedgeLight>( mLights[3] )->pointAt( vec3( x, y, z ) );
+		dynamic_pointer_cast<SpotLight>( mLights[0] )->setPosition( vec3( -x, 9.0f, -z ) );
+		dynamic_pointer_cast<SpotLight>( mLights[0] )->pointAt( vec3( x, 5.0f + y, z ) );
+
+		dynamic_pointer_cast<WedgeLight>( mLights[3] )->setLengthAndAxis( vec3( y-5, 9, 15 ), vec3( y+5, 9, 15 ) );
+		dynamic_pointer_cast<WedgeLight>( mLights[3] )->pointAt( vec3( x, 5.0f + y, z ) );
 
 		x = 5.0f * cosf( t );
 		y = 2.5f + 2.5f * cosf( t );
@@ -270,7 +274,7 @@ void LightsApp::update()
 
 		x = 5.0f * math<float>::cos( t );
 		z = 5.0f * math<float>::sin( t );
-		dynamic_pointer_cast<CapsuleLight>( mLights[2] )->setLengthAndAxis( vec3( 5.0f + x, 2.5f, z ), vec3( 5.0f - x, 2.5f, -z ) );
+		dynamic_pointer_cast<CapsuleLight>( mLights[2] )->setLengthAndAxis( vec3( 5.0f + x, 5.0f, z ), vec3( 5.0f - x, 5.0f, -z ) );
 	}
 
 	// Animate object.
@@ -458,8 +462,8 @@ void LightsApp::keyDown( KeyEvent event )
 			wedge->setRange( 100 );
 		}
 		else {
-			point->setAttenuation( 0, 0.5f );
-			capsule->setAttenuation( 0, 0.5f );
+			point->setAttenuation( 0, 1 );
+			capsule->setAttenuation( 0, 1 );
 			spot->setAttenuation( 0, 0.04f );
 			wedge->setAttenuation( 0, 0.04f );
 			spot->calcRange();
@@ -523,4 +527,4 @@ void LightsApp::render( bool onlyShadowCasters )
 	gl::popModelMatrix();
 }
 
-CINDER_APP_NATIVE( LightsApp, RendererGl( RendererGl::Options().msaa( 4 ) ) )
+CINDER_APP_NATIVE( LightsApp, RendererGl( RendererGl::Options().msaa( 8 ) ) )
