@@ -107,9 +107,11 @@
     <ResourceCompile Include="Resources.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\LightProfile.cpp" />
     <ClCompile Include="..\src\LightsApp.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\LightProfile.h" />
     <ClInclude Include="..\include\Resources.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

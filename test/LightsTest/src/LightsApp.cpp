@@ -11,6 +11,7 @@
 #include "cinder/Light.h"
 #include "cinder/MayaCamUI.h"
 
+#include "LightProfile.h"
 
 using namespace ci;
 using namespace ci::app;
@@ -69,6 +70,8 @@ public:
 
 	void resize() override;
 
+	void fileDrop( FileDropEvent event ) override;
+
 	void render( bool onlyShadowCasters = false );
 private:
 	gl::BatchRef           mRoom, mRoomShadow;
@@ -90,6 +93,9 @@ private:
 	bool                   mAnimateLights;
 	bool                   mDebugDraw;
 	bool                   mHardLights;
+
+	LightProfileRef        mProfile;
+	gl::Texture2dRef       mProfileTexture;
 };
 
 void LightsApp::prepareSettings( Settings *settings )
@@ -112,6 +118,15 @@ void LightsApp::setup()
 	try {
 		// Textures.
 		mModulationTexture = gl::Texture2d::create( loadImage( loadAsset( "gobo1.png" ) ), tfmt );
+
+		Timer t1( true );
+		mProfile = LightProfile::create( loadAsset( "DSXB_LED_16C_450_AMBLW_SYM.ies" ) );
+		t1.stop();
+		Timer t2( true );
+		mProfileTexture = mProfile->createTexture();
+		t2.stop();
+
+		console() << "Load:" << t1.getSeconds() << ", Parse:" << t2.getSeconds() << std::endl;
 
 		// Buffers.
 		mLightDataBuffer = gl::Ubo::create( 32 * sizeof( Light::Data ), nullptr, GL_DYNAMIC_DRAW );
@@ -264,7 +279,7 @@ void LightsApp::update()
 		dynamic_pointer_cast<SpotLight>( mLights[0] )->setPosition( vec3( -x, 9.0f, -z ) );
 		dynamic_pointer_cast<SpotLight>( mLights[0] )->pointAt( vec3( x, 5.0f + y, z ) );
 
-		dynamic_pointer_cast<WedgeLight>( mLights[3] )->setLengthAndAxis( vec3( y-5, 9, 15 ), vec3( y+5, 9, 15 ) );
+		dynamic_pointer_cast<WedgeLight>( mLights[3] )->setLengthAndAxis( vec3( y - 5, 9, 15 ), vec3( y + 5, 9, 15 ) );
 		dynamic_pointer_cast<WedgeLight>( mLights[3] )->pointAt( vec3( x, 5.0f + y, z ) );
 
 		x = 5.0f * cosf( t );
@@ -315,6 +330,8 @@ void LightsApp::draw()
 		gl::setMatrices( *spot );
 
 		render( true );
+
+		gl::popMatrices();
 	}
 
 	// Update uniform buffer object containing light data.
@@ -349,6 +366,12 @@ void LightsApp::draw()
 
 	gl::disableDepthWrite();
 	gl::disableDepthRead();
+
+	//
+	if( mProfileTexture ) {
+		gl::color( 1, 1, 1 );
+		gl::draw( mProfileTexture );
+	}
 }
 
 void LightsApp::mouseDown( MouseEvent event )
@@ -498,6 +521,21 @@ void LightsApp::keyDown( KeyEvent event )
 void LightsApp::resize()
 {
 	mCamera.setAspectRatio( getWindowAspectRatio() );
+}
+
+void LightsApp::fileDrop( FileDropEvent event )
+{
+	const fs::path& path = event.getFile( 0 );
+	if( path.extension() == ".ies" ) {
+		Timer t1( true );
+		mProfile = LightProfile::create( loadFile( path ) );
+		t1.stop();
+		Timer t2( true );
+		mProfileTexture = mProfile->createTexture();
+		t2.stop();
+
+		console() << "Load:" << t1.getSeconds() << ", Parse:" << t2.getSeconds() << std::endl;
+	}
 }
 
 void LightsApp::render( bool onlyShadowCasters )

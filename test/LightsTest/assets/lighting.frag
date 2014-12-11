@@ -52,7 +52,7 @@ float calcShadowPCF4x4( in sampler2DShadow map, in vec4 sc )
 	const int r = 2;
 	const int s = 2 * r;
 
-	sc.z -= 0.001; // Apply shadow bias.
+	sc.z -= 0.0025; // Apply shadow bias.
 	
 	float shadow = 0.0;
 	shadow += textureProjOffset( map, sc, ivec2(-s,-s) );
@@ -97,6 +97,9 @@ vec3 calcRepresentativePoint( in vec3 lightStart, in vec3 lightEnd, in vec3 v, i
 	float a = dot( r, ld );
 	float t = ( dot( r, l0 ) * a - dot( l0, ld ) ) / ( dot( ld, ld ) - a * a );
 
+	// Calculate a distance factor. Multiply it by the light's length to find the distance to the light source.
+	//d = max( max( 0.0, 0.0 - t ), max( 0.0, t - 1.0 ) );
+
 	return lightStart + saturate( t ) * (lightEnd - lightStart);
 }
 
@@ -119,9 +122,9 @@ float calcScattering( vec3 vertPos, vec3 lightPos )
 void main(void)
 {
 	const vec3  kMaterialDiffuseColor = vec3( 1 );
-	const vec3  kMaterialSpecularColor = vec3( 1 );
+	const vec3  kMaterialSpecularColor = vec3( 0.25 );
 	const float kMaterialShininess = 100.0;
-	const float kAtmosphericScattering = 0.05;
+	const float kAtmosphericScattering = 0.025;
 
 	// Initialize ambient, diffuse and specular colors.
 	vec3 ambient = vec3( 0 );
@@ -201,7 +204,7 @@ void main(void)
 			diffuse += kAtmosphericScattering * scatter * lightColor;
 		}
 
-		// Calculate representative light vector (for linear lights only).
+		// Calculate representative light vector (for linear lights only). TODO: works for standard Phong only, Blinn-Phong seems wrong.
 		if( isLinearLight ) {
 			vec3 lightPosition = calcRepresentativePoint( lightStart, lightEnd, vertPosition.xyz, -reflect( E, N ) );
 			L = lightPosition - vertPosition.xyz; distance = length( L ); L /= distance;
