@@ -183,9 +183,9 @@ void main(void)
 		vec3 modulation = vec3( 1 );
 		if( hasModulation )
 		{
-			if( ( type & 0x1 ) > 0 ) // Point lightPosition
+			if( ( type & 0x1 ) > 0 ) // Point light: based on latlong map.
 			{
-				vec4 D = uLight[i].modulationMatrix * vec4( -L, 0 );// * 0.5 + 0.5;
+				vec4 D = uLight[i].modulationMatrix * vec4( -L, 0 );
 				vec2 modulationCoord = vec2(0.5) + vec2( 0.5 * atan( D.z, D.x ), atan( D.y, length( D.xz ) ) ) / kPi;
 				modulation = texture( uModulationMap[ uLight[i].modulationIndex ], modulationCoord  ).rgb;				
 			}
@@ -203,7 +203,7 @@ void main(void)
 
 		// Calculate diffuse color (clamp it to the light's range).
 		float lambert = max( 0.0, dot( N, L ) );
-		float range = 1.0;//mix( 1.0, step( distance, uLight[i].range ), !isDirectional );
+		float range = mix( 1.0, step( distance, uLight[i].range ), !isDirectional );
 		diffuse += shadow * range * colorAttenuation * distanceAttenuation * angularAttenuation * lambert * kMaterialDiffuseColor;
 
 		// Calculate light Scattering.
@@ -240,6 +240,6 @@ void main(void)
 	}
 
 	// Output gamma-corrected color.
-	fragColor.rgb = ( ambient + diffuse + specular );
+	fragColor.rgb = sqrt( ambient + diffuse + specular );
 	fragColor.a = 1.0;
 }

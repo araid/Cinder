@@ -59,6 +59,29 @@ void Light::setColor( const Color &color )
 	mColor = m * color;
 }
 
+void Light::setColorTemperature( float kelvin )
+{
+	vec3 a, b, c;
+
+	if( kelvin <= 6500.0f ) {
+		a = vec3( 0.0, -2902.1955373783176, -8257.7997278925690 );
+		b = vec3( 0.0, 1669.5803561666639, 2575.2827530017594 );
+		c = vec3( 1.0, 1.3302673723350029, 1.8993753891711275 );
+	}
+	else {
+		a = vec3( 1745.0425298314172, 1216.6168361476490, -8257.7997278925690 );
+		b = vec3( -2666.3474220535695, -2173.1012343082230, 2575.2827530017594 );
+		c = vec3( 0.55995389139931482, 0.70381203140554553, 1.8993753891711275 );
+	}
+
+	vec3 rgb = a / ( kelvin + b ) + c;
+	rgb.r = glm::clamp( rgb.r, 0.0f, 1.0f );
+	rgb.g = glm::clamp( rgb.g, 0.0f, 1.0f );
+	rgb.b = glm::clamp( rgb.b, 0.0f, 1.0f );
+
+	mColor = Color( rgb.r, rgb.g, rgb.b );
+}
+
 Light::Data DirectionalLight::getData( double time, const mat4 &transform ) const
 {
 	// Populate the LightData structure.

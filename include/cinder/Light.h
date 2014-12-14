@@ -171,6 +171,8 @@ public:
 	void setColor( const Color& color );
 	//! Set the relative intensity for red, green and blue. Values will be kept within the range [0, 1] and the light's intensity will be adjusted for brighter lights.
 	void setColor( float r, float g, float b ) { setColor( Color( r, g, b ) ); }
+	//! Set the color temperature in Kelvin. Will be converted to RGB.
+	void setColorTemperature( float kelvin );
 
 	//! Returns TRUE if the light is casting shadows.
 	bool hasShadows() const { return ( mFlags & Data::ShadowEnabled ) > 0; }

@@ -2,20 +2,35 @@
 #include "LightProfile.h"
 
 #include "cinder/Utilities.h"
+#include <boost/algorithm/string.hpp>
 
 using namespace ci;
 
 void LightProfile::readData( DataSourceRef src )
 {
+	LightProfileData data;
+
 	// Open file stream.
 	IStreamRef stream = src->createStream();
 
 	// Check file header.
 	std::string header = stream->readLine();
-	if( header != "IESNA:LM-63-2002" )
+	if( header.compare( 0, 5, "IESNA" ) )
 		throw LightProfileInvalidExc();
 
-	// Find first data.
+	// Determine file format.
+	if( header == "IESNA:LM-63-1986" )
+		data.fileFormat = LightProfileData::LM_63_1986;
+	else if( header == "IESNA:LM-63-1991" )
+		data.fileFormat = LightProfileData::LM_63_1991;
+	else if( header == "IESNA:LM-63-1995" )
+		data.fileFormat = LightProfileData::LM_63_1995;
+	else if( header == "IESNA:LM-63-2002" )
+		data.fileFormat = LightProfileData::LM_63_2002;
+	else
+		throw LightProfileInvalidExc();
+
+	// Skip all keywords.
 	std::string line;
 	while( !stream->isEof() && line.compare( 0, 5, "TILT=" ) ) {
 		line = stream->readLine();
@@ -28,7 +43,6 @@ void LightProfile::readData( DataSourceRef src )
 	}
 
 	// Parse the file.
-	LightProfileData data;
 	std::vector<std::string> tokens;
 
 	if( stream->isEof() )
@@ -39,6 +53,7 @@ void LightProfile::readData( DataSourceRef src )
 	data.candelaValues.clear();
 
 	line = stream->readLine();
+	boost::trim( line );
 	tokens = ci::split( line, ", ", true );
 
 	assert( tokens.size() == 10 );
@@ -57,6 +72,7 @@ void LightProfile::readData( DataSourceRef src )
 		throw LightProfileUnexpectedEOFExc();
 
 	line = stream->readLine();
+	boost::trim( line );
 	tokens = ci::split( line, ", ", true );
 
 	assert( tokens.size() == 3 );
@@ -68,22 +84,24 @@ void LightProfile::readData( DataSourceRef src )
 			throw LightProfileUnexpectedEOFExc();
 
 		line = stream->readLine();
+		boost::trim( line );
 		tokens = ci::split( line, ", ", true );
 
 		for( size_t i = 0; i < tokens.size(); ++i )
-			data.verticalAngles.push_back( ci::fromString<float>( tokens[i] ) );
-	}
+				data.verticalAngles.push_back( ci::fromString<float>( tokens[i] ) );
+		}
 
 	while( data.horizontalAngles.size() < data.numberOfHorizontalAngles ) {
 		if( stream->isEof() )
 			throw LightProfileUnexpectedEOFExc();
 
 		line = stream->readLine();
+		boost::trim( line );
 		tokens = ci::split( line, ", ", true );
 
 		for( size_t i = 0; i < tokens.size(); ++i )
-			data.horizontalAngles.push_back( ci::fromString<float>( tokens[i] ) );
-	}
+				data.horizontalAngles.push_back( ci::fromString<float>( tokens[i] ) );
+		}
 
 	data.maxCandelaValue = 0.0f;
 
@@ -93,6 +111,7 @@ void LightProfile::readData( DataSourceRef src )
 			throw LightProfileUnexpectedEOFExc();
 
 		line = stream->readLine();
+		boost::trim( line );
 		tokens = ci::split( line, ", ", true );
 
 		for( size_t i = 0; i < tokens.size(); ++i ) {
@@ -113,6 +132,12 @@ void LightProfile::readData( DataSourceRef src )
 		throw LightProfileInvalidExc();
 
 	mData = data;
+}
+
+void LightProfile::wrapIndex( int *horIndex, int *vertIndex ) const
+{
+	*horIndex = (int) wrap( *horIndex, 0, mData.numberOfHorizontalAngles );
+	*vertIndex = math<int>::clamp( *vertIndex, 0, mData.numberOfVerticalAngles - 1 );
 }
 
 void LightProfile::wrapAngles( float *horAngle, float *vertAngle ) const
@@ -158,8 +183,7 @@ size_t LightProfile::getVerticalIndex( float angle ) const
 
 float LightProfile::getCandela( int horIndex, int vertIndex ) const
 {
-	horIndex = math<int>::clamp( horIndex, 0, mData.numberOfHorizontalAngles - 1 );
-	vertIndex = math<int>::clamp( vertIndex, 0, mData.numberOfVerticalAngles - 1 );
+	wrapIndex( &horIndex, &vertIndex );
 
 	int index = horIndex * mData.numberOfVerticalAngles + vertIndex;
 	if( index < mData.numberOfCandelaValues )
@@ -170,22 +194,21 @@ float LightProfile::getCandela( int horIndex, int vertIndex ) const
 
 void LightProfile::getCandela( int horIndex, int vertIndex, float *c0, float *c1, float *c2, float *c3 ) const
 {
-	horIndex = math<int>::clamp( horIndex, 0, mData.numberOfHorizontalAngles - 1 );
-	vertIndex = math<int>::clamp( vertIndex, 0, mData.numberOfVerticalAngles - 1 );
+	wrapIndex( &horIndex, &vertIndex );
 
 	*c1 = getCandela( horIndex, vertIndex );
-	*c2 = getCandela( horIndex, vertIndex + 1 );
-	if( vertIndex == 0 )
+	*c2 = getCandela( horIndex + 1, vertIndex );
+	if( horIndex == 0 )
 		*c0 = *c1 * 2.0f - *c2;
 	else
-		*c0 = getCandela( horIndex, vertIndex - 1 );
-	if( vertIndex >= mData.numberOfVerticalAngles - 2 )
+		*c0 = getCandela( horIndex - 1, vertIndex );
+	if( horIndex >= mData.numberOfHorizontalAngles - 2 )
 		*c3 = *c2 * 2.0f - *c1;
 	else
-		*c3 = getCandela( horIndex, vertIndex + 2 );
+		*c3 = getCandela( horIndex - 2, vertIndex );
 }
 
-float LightProfile::getClosestCandela( float horAngle, float vertAngle ) const
+float LightProfile::getNearestCandela( float horAngle, float vertAngle ) const
 {
 	wrapAngles( &horAngle, &vertAngle );
 
@@ -212,19 +235,19 @@ float LightProfile::getInterpolatedCandela( float horAngle, float vertAngle ) co
 	float vt = ( vn == vi ) ? 0.0f : ( vertAngle - mData.verticalAngles[vi] ) / ( mData.verticalAngles[vn] - mData.verticalAngles[vi] );
 
 	// Interpolate.
-	getCandela( hi - 1, vi, &p0, &p1, &p2, &p3 );
-	float c0 = interpolate( p0, p1, p2, p3, vt );
-	getCandela( hi + 0, vi, &p0, &p1, &p2, &p3 );
-	float c1 = interpolate( p0, p1, p2, p3, vt );
-	getCandela( hi + 1, vi, &p0, &p1, &p2, &p3 );
-	float c2 = interpolate( p0, p1, p2, p3, vt );
-	getCandela( hi + 2, vi, &p0, &p1, &p2, &p3 );
-	float c3 = interpolate( p0, p1, p2, p3, vt );
+	getCandela( hi, vi - 1, &p0, &p1, &p2, &p3 );
+	float c0 = interpolate( p0, p1, p2, p3, ht );
+	getCandela( hi, vi + 0, &p0, &p1, &p2, &p3 );
+	float c1 = interpolate( p0, p1, p2, p3, ht );
+	getCandela( hi, vi + 1, &p0, &p1, &p2, &p3 );
+	float c2 = interpolate( p0, p1, p2, p3, ht );
+	getCandela( hi, vi + 2, &p0, &p1, &p2, &p3 ); 
+	float c3 = interpolate( p0, p1, p2, p3, ht );
 
-	return interpolate( c0, c1, c2, c3, ht );
+	return interpolate( c0, c1, c2, c3, vt );
 }
 
-gl::Texture2dRef LightProfile::createTexture() const
+gl::Texture2dRef LightProfile::createTexture2d() const
 {
 	static const int kSize = 256;
 
@@ -232,16 +255,16 @@ gl::Texture2dRef LightProfile::createTexture() const
 		return gl::Texture2dRef();
 
 	// Interpolate.
-	Channel32f data( kSize, kSize );
-	float *ptr = data.getData();
+	Channel8u data( kSize, kSize );
+	uint8_t *ptr = data.getData();
 	for( size_t j = 0; j < kSize; ++j ) {
-		float vertAngle = glm::degrees( glm::acos( 2.0f * j / kSize - 1.0f ) );
+		float vertAngle = glm::degrees( glm::acos( 2.0f * j / ( kSize - 1 ) - 1.0f ) );
 		for( size_t i = 0; i < kSize; ++i ) {
-			float horAngle = i * 360.0f / kSize;
+			float horAngle = i * 360.0f / ( kSize - 1 );
 			float candela = getInterpolatedCandela( horAngle, vertAngle );
-			*ptr++ = (float) ( glm::clamp( candela / mData.maxCandelaValue, 0.0f, 1.0f ) * 1 );
+			*ptr++ = (uint8_t) ( glm::clamp( candela / mData.maxCandelaValue, 0.0f, 1.0f ) * 255 );
 		}
 	}
 
-	return gl::Texture2d::create( data );
+	return gl::Texture2d::create( data, gl::Texture2d::Format().wrapS( GL_REPEAT ).wrapT( GL_CLAMP_TO_EDGE ) );
 }

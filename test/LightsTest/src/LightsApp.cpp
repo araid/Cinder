@@ -13,7 +13,7 @@
 
 #include "LightProfile.h"
 
-#define ROOM_SIZE 10
+#define ROOM_SIZE 50
 
 using namespace ci;
 using namespace ci::app;
@@ -121,18 +121,6 @@ void LightsApp::setup()
 		// Textures.
 		mModulationTexture = gl::Texture2d::create( loadImage( loadAsset( "gobo1.png" ) ), tfmt );
 
-		Timer t1( true );
-		mProfile = LightProfile::create( loadAsset( "DSXB_LED_16C_450_AMBLW_SYM.ies" ) );
-		t1.stop();
-		Timer t2( true );
-		tfmt.enableMipmapping( false );
-		tfmt.setMinFilter( GL_LINEAR );
-		tfmt.setWrap( GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE );
-		mProfileTexture = gl::Texture2d::create( loadImage( loadAsset( "ies.png" ) ), tfmt ); // mProfile->createTexture();
-		t2.stop();
-
-		console() << "Load:" << t1.getSeconds() << ", Parse:" << t2.getSeconds() << std::endl;
-
 		// Buffers.
 		mLightDataBuffer = gl::Ubo::create( 32 * sizeof( Light::Data ), nullptr, GL_DYNAMIC_DRAW );
 		mLightDataBuffer->bindBufferBase( 0 );
@@ -176,7 +164,7 @@ void LightsApp::setup()
 
 	// The color describes the relative intensity of the light for each of the primary colors red, green and blue.
 	// If you want the light to be brighter, change its intensity rather than its color.
-	spot->setColor( Color::hex( 0xE68800 ) );
+	spot->setColor( Color::hex( 0x7800CE ) );
 
 	// The spot ratio determines how wide the (outer) cone of the spot light is. A ratio of 1 means that
 	// it is as wide as it is tall, which equals a spot angle of 45 degrees and a cone angle of 90 degrees.
@@ -227,12 +215,11 @@ void LightsApp::setup()
 	mLights.push_back( point );
 
 	point->setPosition( vec3( 0, 10, 0 ) );
-	//point->pointAt( vec3( 0, 1, 0 ) );
-	point->setRange( 20 );
-	point->setAttenuation( 0, 0.05f );
+	point->setAttenuation( 0, 0.01f );
 	point->setIntensity( 1.5f );
-	//point->setColor( Color::hex( 0x7800CE ) );
+	point->setColorTemperature( 3000.0f ); // Color::hex( 0xE68800 ) );
 	point->setModulationIndex( 1 );
+	point->calcRange();
 
 	// Create capsule light.
 	CapsuleLightRef capsule = Light::createCapsule();
@@ -383,7 +370,6 @@ void LightsApp::draw()
 
 		// Bind textures and render.
 		gl::ScopedTextureBind gobo( mModulationTexture, (uint8_t) 1 );
-		gl::ScopedTextureBind profile( mProfileTexture, (uint8_t) 2 );
 		gl::ScopedTextureBind shadowmap( mShadowMap->getTexture(), (uint8_t) 3 );
 		render( false );
 
@@ -503,18 +489,20 @@ void LightsApp::keyDown( KeyEvent event )
 		// Toggle distance attenuation for spot and wedge lights.
 		mHardLights = !mHardLights;
 		if( mHardLights ) {
-			point->setAttenuation( 0.5f, 0 );
+			point->setAttenuation( 0.1f, 0 );
 			capsule->setAttenuation( 0.5f, 0 );
 			spot->setAttenuation( 0, 0 );
 			wedge->setAttenuation( 0, 0 );
+			point->calcRange();
 			spot->setRange( 100 );
 			wedge->setRange( 100 );
 		}
 		else {
-			point->setAttenuation( 0, 1 );
+			point->setAttenuation( 0, 0.01f );
 			capsule->setAttenuation( 0, 1 );
 			spot->setAttenuation( 0, 0.04f );
 			wedge->setAttenuation( 0, 0.04f );
+			point->calcRange();
 			spot->calcRange();
 			wedge->calcRange();
 		}
@@ -555,14 +543,9 @@ void LightsApp::fileDrop( FileDropEvent event )
 	const fs::path& path = event.getFile( 0 );
 	if( path.extension() == ".ies" ) {
 		try {
-			Timer t1( true );
 			mProfile = LightProfile::create( loadFile( path ) );
-			t1.stop();
-			Timer t2( true );
-			mProfileTexture = mProfile->createTexture();
-			t2.stop();
-
-			console() << "Load:" << t1.getSeconds() << ", Parse:" << t2.getSeconds() << std::endl;
+			mProfileTexture = mProfile->createTexture2d();
+			mProfileTexture->bind( 2 );
 		}
 		catch( ... ) {}
 	}

@@ -5,6 +5,7 @@
 #include "cinder/Exception.h"
 
 struct LightProfileData {
+	enum Format { LM_63_1986, LM_63_1991, LM_63_1995, LM_63_2002 };
 	enum Symmetry { LATERAL, QUADRANT, HEMISPHERE, NONE };
 
 	LightProfileData() : numberOfLamps( 0 ), numberOfVerticalAngles( 0 ), numberOfHorizontalAngles( 0 ) {}
@@ -22,14 +23,18 @@ struct LightProfileData {
 	float ballastFactor;
 	float inputWatts;
 
-	int   numberOfCandelaValues;
-	float maxCandelaValue;
-
-	Symmetry horizontalSymmetry;
-
 	std::vector<float> verticalAngles;
 	std::vector<float> horizontalAngles;
 	std::vector<float> candelaValues;
+
+	// The following members are not part of the file specification.
+
+	Format   fileFormat;
+
+	int      numberOfCandelaValues;
+	float    maxCandelaValue;
+
+	Symmetry horizontalSymmetry;
 };
 
 typedef std::shared_ptr<class LightProfile> LightProfileRef;
@@ -42,11 +47,12 @@ public:
 	static std::shared_ptr<LightProfile> create() { return std::make_shared<LightProfile>(); }
 	static std::shared_ptr<LightProfile> create( ci::DataSourceRef src ) { return std::make_shared<LightProfile>( src ); }
 
-	ci::gl::Texture2dRef createTexture() const;
+	ci::gl::Texture2dRef createTexture2d() const;
 
 protected:
 	void readData( ci::DataSourceRef src );
 
+	void wrapIndex( int *horIndex, int *vertIndex ) const;
 	void wrapAngles( float *horAngle, float *vertAngle ) const;
 
 	//! Returns the index of the largest horizontal angle smaller than \a angle.
@@ -58,7 +64,7 @@ protected:
 	float    getCandela( int horIndex, int vertIndex ) const;
 	//! Returns four candela values that can be used for cubic interpolation.
 	void     getCandela( int horIndex, int vertIndex, float *c0, float *c1, float *c2, float *c3 ) const;
-	float    getClosestCandela( float horAngle, float vertAngle ) const;
+	float    getNearestCandela( float horAngle, float vertAngle ) const;
 	float    getInterpolatedCandela( float horAngle, float vertAngle ) const;
 
 	template<typename T>
