@@ -204,7 +204,7 @@ float LightProfile::getInterpolatedCandela( float horAngle, float vertAngle ) co
 	// Get index.
 	int hi = getHorizontalIndex( horAngle );
 	int vi = getVerticalIndex( vertAngle );
-	
+
 	// Get interpolation factor.
 	int hn = math<int>::clamp( hi + 1, 0, mData.numberOfHorizontalAngles - 1 );
 	int vn = math<int>::clamp( vi + 1, 0, mData.numberOfVerticalAngles - 1 );
@@ -226,22 +226,22 @@ float LightProfile::getInterpolatedCandela( float horAngle, float vertAngle ) co
 
 gl::Texture2dRef LightProfile::createTexture() const
 {
-	static const int kSize = 512;
+	static const int kSize = 256;
 
 	if( !mData.numberOfLamps )
 		return gl::Texture2dRef();
 
 	// Interpolate.
-	uint8_t data[kSize * kSize];
-	uint8_t *ptr = &data[0];
+	Channel32f data( kSize, kSize );
+	float *ptr = data.getData();
 	for( size_t j = 0; j < kSize; ++j ) {
-		float vertAngle = glm::degrees( glm::asin( 2.0f * j / kSize - 1.0f ) + M_PI / 2 );
+		float vertAngle = glm::degrees( glm::acos( 2.0f * j / kSize - 1.0f ) );
 		for( size_t i = 0; i < kSize; ++i ) {
 			float horAngle = i * 360.0f / kSize;
 			float candela = getInterpolatedCandela( horAngle, vertAngle );
-			*ptr++ = (uint8_t) ( glm::sqrt( glm::clamp( candela / mData.maxCandelaValue, 0.0f, 1.0f ) ) * 255.0f );
+			*ptr++ = (float) ( glm::clamp( candela / mData.maxCandelaValue, 0.0f, 1.0f ) * 1 );
 		}
 	}
 
-	return gl::Texture2d::create( data, GL_RED, kSize, kSize, gl::Texture2d::Format().internalFormat( GL_RED ).swizzleMask( GL_RED, GL_RED, GL_RED, GL_ONE ) );
+	return gl::Texture2d::create( data );
 }

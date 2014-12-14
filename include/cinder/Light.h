@@ -238,7 +238,7 @@ private:
 
 typedef std::shared_ptr<class PointLight> PointLightRef;
 
-class PointLight : public Light, public ILightPosition, public ILightRange, public ILightAttenuation {
+class PointLight : public Light, public ILightPosition, public ILightDirection, public ILightRange, public ILightAttenuation {
 public:
 	typedef enum Face { POSITIVE_X = 0, NEGATIVE_X, POSITIVE_Y, NEGATIVE_Y, POSITIVE_Z, NEGATIVE_Z };
 
@@ -255,7 +255,11 @@ public:
 
 	const vec3& getPosition() const override { return mPosition; }
 	vec3 getPosition( const mat4& transform ) const override { return vec3( transform * vec4( mPosition, 1 ) ); }
-	void setPosition( const vec3& worldPosition ) override { mPosition = worldPosition; mIsDirty = true; }
+	void setPosition( const vec3& worldPosition ) override { mIsDirty = true; mPosition = worldPosition; if( mIsPointingAt ) pointAt( mPointAt ); }
+
+	const vec3& getDirection() const override { return mDirection; }
+	vec3 getDirection( const mat4& transform ) const override { return vec3( transform * vec4( mDirection, 0 ) ); }
+	virtual void setDirection( const vec3& direction ) override { mIsDirty = true; mIsPointingAt = false; mDirection = glm::normalize( direction ); }
 
 	/*! Returns the range of the light, which is a function of the intensity and the distance attenuation.
 		Surfaces beyond the range do not receive any light.*/
@@ -268,6 +272,11 @@ public:
 	//! Calculates the required intensity of the light for the light's range and attenuation. Returns TRUE on success.
 	bool calcIntensity( float threshold = 2.0f / 255.0f ) override { return Light::calcIntensity( mRange, mAttenuation, &mIntensity, threshold ); }
 
+	//! Returns true if the light remains pointed at the same location when moved.
+	bool isPointingAt() const { return mIsPointingAt; }
+	//! Point the light at the specified world position. This is only useful in combination with a modulation map.
+	virtual void pointAt( const vec3& point ) { mIsDirty = true; mIsPointingAt = true; mPointAt = point; mDirection = glm::normalize( mPointAt - mPosition ); }
+
 	//! Returns the linear and quadratic distance attenuation.
 	const vec2& getAttenuation() const override { return mAttenuation; }
 	//! Set constant, linear and quadratic distance \a attenuation. 
@@ -279,6 +288,13 @@ public:
 	const mat4& getViewMatrix( Face face ) const { updateMatrices(); return mViewMatrix[(int) face]; }
 	//! Returns the light's projection matrix.
 	const mat4& getProjectionMatrix() const { updateMatrices(); return mProjectionMatrix; }
+	//! Returns a matrix that transforms world direction based on the modulation parameters.
+	mat4 getModulationMatrix( double time ) const;
+
+	//! Returns the modulation map index. The index can be used to access an array of samplers in your shader.
+	uint8_t getModulationIndex() const { return mModulationIndex; }
+	//! Set the modulation map index. The index can be used to access an array of samplers in your shader.
+	void setModulationIndex( uint8_t index ) { mModulationIndex = index; }
 
 	//! Returns the shadow map index. The index can be used to access an array of samplers in your shader.
 	uint8_t getShadowIndex() const { return mShadowIndex; }
@@ -287,21 +303,27 @@ public:
 
 	//! Enables or disables shadow casting for this light.
 	void enableShadows( bool enabled = true ) { if( enabled ) mFlags |= Data::ShadowEnabled; else mFlags &= ~Data::ShadowEnabled; }
+	//! Enables or disables the modulation texture for this light.
+	void enableModulation( bool enabled = true ) { if( enabled ) mFlags |= Data::ModulationEnabled; else mFlags &= ~Data::ModulationEnabled; }
 
 protected:
 	PointLight()
 		: PointLight( Point ) {}
 	PointLight( Type type )
-		: Light( type ), mPosition( 0 ), mRange( 100 ), mAttenuation( 0 ), mShadowIndex( 0 ), mIsDirty( true ) {}
+		: Light( type ), mPosition( 0 ), mRange( 100 ), mAttenuation( 0 ), mIsPointingAt( false ), mModulationIndex( 0 ), mShadowIndex( 0 ), mIsDirty( true ) {}
 
 private:
 	void updateMatrices() const;
 
 protected:
 	vec3       mPosition;
+	vec3       mDirection;
 	float      mRange;
 	vec2       mAttenuation;
+	vec3       mPointAt;
+	bool       mIsPointingAt;
 
+	uint8_t    mModulationIndex;
 	uint8_t    mShadowIndex;
 
 	mutable bool       mIsDirty;

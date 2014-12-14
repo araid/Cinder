@@ -76,7 +76,19 @@ Light::Data PointLight::getData( double time, const mat4 &transform ) const
 	params.range = mRange;
 	params.attenuation = getAttenuation();
 
-	params.shadowIndex = mShadowIndex;
+	if( mFlags & ( Data::ShadowEnabled | Data::ModulationEnabled ) ) {
+		mat4 invTransform = glm::inverse( transform );
+
+		if( mFlags & Data::ShadowEnabled ) {
+			//params.shadowMatrix = getShadowMatrix() * invTransform;
+			params.shadowIndex = mShadowIndex;
+		}
+
+		if( mFlags & Data::ModulationEnabled ) {
+			params.modulationMatrix = getModulationMatrix( time ) * invTransform;
+			params.modulationIndex = mModulationIndex;
+		}
+	}
 
 	return params;
 }
@@ -96,16 +108,24 @@ void PointLight::updateMatrices() const
 	}
 }
 
+mat4 PointLight::getModulationMatrix( double time ) const
+{
+	// Determine the up vector based on the current direction.
+	//float dot = glm::abs( glm::dot( mDirection, vec3( 0, 1, 0 ) ) );
+	//vec3  up = ( dot < 0.99f ) ? vec3( 0, 1, 0 ) : vec3( 0, 0, 1 );
+
+	//return glm::lookAt( mPosition, mPointAt, up );
+
+	return glm::toMat4( glm::quat( mDirection, vec3( 0, -1, 0 ) ) );
+}
+
 Light::Data CapsuleLight::getData( double time, const mat4 &transform ) const
 {
 	// Adjust position.
 	vec3 position = mPosition - 0.5f * mLength * mAxis;
 
 	// Populate the LightData structure.
-	Light::Data params = Light::getData( time, transform );
-	params.position = vec3( transform * vec4( position, 1 ) );
-	params.range = mRange;
-	params.attenuation = mAttenuation;
+	Light::Data params = PointLight::getData( time, transform );
 	params.horizontal = glm::normalize( mat3( transform ) * mAxis );
 	params.width = mLength;
 

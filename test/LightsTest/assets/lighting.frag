@@ -121,9 +121,10 @@ float calcScattering( vec3 vertPos, vec3 lightPos )
 
 void main(void)
 {
+	const float kPi = 3.14159265;
 	const vec3  kMaterialDiffuseColor = vec3( 1 );
 	const vec3  kMaterialSpecularColor = vec3( 0.25 );
-	const float kMaterialShininess = 100.0;
+	const float kMaterialShininess = 200.0;
 	const float kAtmosphericScattering = 0.025;
 
 	// Initialize ambient, diffuse and specular colors.
@@ -154,22 +155,6 @@ void main(void)
 		bool hasShadows = ( flags & 0x20 ) > 0;
 		bool hasModulation = ( flags & 0x10 ) > 0;
 
-		// Calculate shadow.
-		float shadow = 1.0;
-		if( hasShadows )
-		{
-			vec4 shadowCoord = uLight[i].shadowMatrix * vertPosition;
-			shadow = calcShadowPCF4x4( uShadowMap[ uLight[i].shadowIndex ], shadowCoord );
-		}
-
-		// Calculate modulation.
-		vec3 modulation = vec3( 1 );
-		if( hasModulation )
-		{
-			vec4 modulationCoord = uLight[i].modulationMatrix * vertPosition;
-			modulation = textureProj( uModulationMap[ uLight[i].modulationIndex ], modulationCoord ).rgb;
-		}
-
 		// Calculate end-points of the light for convenience.
 		vec3 lightStart = uLight[i].position;
 		vec3 lightEnd   = uLight[i].position + uLight[i].width * uLight[i].horizontal;
@@ -186,6 +171,31 @@ void main(void)
 			L = lightPosition - vertPosition.xyz; distance = length( L ); L /= distance;
 		}
 
+		// Calculate shadow.
+		float shadow = 1.0;
+		if( hasShadows )
+		{
+			vec4 shadowCoord = uLight[i].shadowMatrix * vertPosition;
+			shadow = calcShadowPCF4x4( uShadowMap[ uLight[i].shadowIndex ], shadowCoord );
+		}
+
+		// Calculate modulation.
+		vec3 modulation = vec3( 1 );
+		if( hasModulation )
+		{
+			if( ( type & 0x1 ) > 0 ) // Point lightPosition
+			{
+				vec4 D = uLight[i].modulationMatrix * vec4( -L, 0 );// * 0.5 + 0.5;
+				vec2 modulationCoord = vec2(0.5) + vec2( 0.5 * atan( D.z, D.x ), atan( D.y, length( D.xz ) ) ) / kPi;
+				modulation = texture( uModulationMap[ uLight[i].modulationIndex ], modulationCoord  ).rgb;				
+			}
+			else if( ( type & 0x4 ) > 0 ) // Spot light
+			{
+				vec4 modulationCoord = uLight[i].modulationMatrix * vertPosition;
+				modulation = textureProj( uModulationMap[ uLight[i].modulationIndex ], modulationCoord ).rgb;
+			}
+		}
+
 		// Calculate attenuation.
 		float angularAttenuation = mix( 1.0, calcAngularAttenuation( L, uLight[i].direction, uLight[i].angle ), isSpotOrWedge );
 		float distanceAttenuation = mix( 1.0, calcDistanceAttenuation( distance, uLight[i].attenuation ), !isDirectional );
@@ -193,7 +203,7 @@ void main(void)
 
 		// Calculate diffuse color (clamp it to the light's range).
 		float lambert = max( 0.0, dot( N, L ) );
-		float range = mix( 1.0, step( distance, uLight[i].range ), !isDirectional );
+		float range = 1.0;//mix( 1.0, step( distance, uLight[i].range ), !isDirectional );
 		diffuse += shadow * range * colorAttenuation * distanceAttenuation * angularAttenuation * lambert * kMaterialDiffuseColor;
 
 		// Calculate light Scattering.
@@ -230,6 +240,6 @@ void main(void)
 	}
 
 	// Output gamma-corrected color.
-	fragColor.rgb = sqrt( ambient + diffuse + specular );
+	fragColor.rgb = ( ambient + diffuse + specular );
 	fragColor.a = 1.0;
 }

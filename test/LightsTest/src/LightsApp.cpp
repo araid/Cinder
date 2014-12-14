@@ -13,6 +13,8 @@
 
 #include "LightProfile.h"
 
+#define ROOM_SIZE 10
+
 using namespace ci;
 using namespace ci::app;
 using namespace std;
@@ -107,7 +109,7 @@ void LightsApp::prepareSettings( Settings *settings )
 void LightsApp::setup()
 {
 	// Disable vertical sync, so we can determine the performance.
-	gl::enableVerticalSync( false );
+	gl::enableVerticalSync( true );
 
 	// Load assets.
 	gl::Texture2d::Format tfmt;
@@ -123,7 +125,10 @@ void LightsApp::setup()
 		mProfile = LightProfile::create( loadAsset( "DSXB_LED_16C_450_AMBLW_SYM.ies" ) );
 		t1.stop();
 		Timer t2( true );
-		mProfileTexture = mProfile->createTexture();
+		tfmt.enableMipmapping( false );
+		tfmt.setMinFilter( GL_LINEAR );
+		tfmt.setWrap( GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE );
+		mProfileTexture = gl::Texture2d::create( loadImage( loadAsset( "ies.png" ) ), tfmt ); // mProfile->createTexture();
 		t2.stop();
 
 		console() << "Load:" << t1.getSeconds() << ", Parse:" << t2.getSeconds() << std::endl;
@@ -139,7 +144,8 @@ void LightsApp::setup()
 		// Uniforms.
 		mShader->uniformBlock( "uLights", 0 );
 		mShader->uniform( "uModulationMap[0]", 1 );
-		mShader->uniform( "uShadowMap[0]", 2 );
+		mShader->uniform( "uModulationMap[1]", 2 );
+		mShader->uniform( "uShadowMap[0]", 3 );
 	}
 	catch( const std::exception &e ) {
 		console() << e.what() << std::endl;
@@ -149,8 +155,8 @@ void LightsApp::setup()
 
 	// Create 3D room using a box and then flipping the normals. This is only required if the shader is actually using normals.
 	auto flipNormals = []( const vec3& normal ) { return -normal; };
-	mRoom = gl::Batch::create( geom::AttribFn<vec3, vec3>( geom::Cube().size( vec3( 50 ) ), geom::NORMAL, geom::NORMAL, flipNormals ), mShader );
-	mRoomShadow = gl::Batch::create( geom::Cube().size( vec3( 50 ) ), mShaderShadow );
+	mRoom = gl::Batch::create( geom::AttribFn<vec3, vec3>( geom::Cube().size( vec3( ROOM_SIZE ) ), geom::NORMAL, geom::NORMAL, flipNormals ), mShader );
+	mRoomShadow = gl::Batch::create( geom::Cube().size( vec3( ROOM_SIZE ) ), mShaderShadow );
 
 	// Create an object in the room.
 	mObject = gl::Batch::create( geom::Teapot().subdivisions( 60 ), mShader );
@@ -220,10 +226,13 @@ void LightsApp::setup()
 	PointLightRef point = Light::createPoint();
 	mLights.push_back( point );
 
-	point->setPosition( vec3( -2.5f, 2, -2.5f ) );
-	point->setRange( 10 );
-	point->setAttenuation( 0, 1 );
-	point->setColor( Color::hex( 0x7800CE ) );
+	point->setPosition( vec3( 0, 10, 0 ) );
+	//point->pointAt( vec3( 0, 1, 0 ) );
+	point->setRange( 20 );
+	point->setAttenuation( 0, 0.05f );
+	point->setIntensity( 1.5f );
+	//point->setColor( Color::hex( 0x7800CE ) );
+	point->setModulationIndex( 1 );
 
 	// Create capsule light.
 	CapsuleLightRef capsule = Light::createCapsule();
@@ -269,6 +278,20 @@ void LightsApp::setup()
 
 void LightsApp::update()
 {
+	// Let's get some references for easy access.
+	SpotLightRef spot = static_pointer_cast<SpotLight>( mLights[0] );
+	PointLightRef point = static_pointer_cast<PointLight>( mLights[1] );
+	CapsuleLightRef capsule = static_pointer_cast<CapsuleLight>( mLights[2] );
+	WedgeLightRef wedge = static_pointer_cast<WedgeLight>( mLights[3] );
+	DirectionalLightRef directional = static_pointer_cast<DirectionalLight>( mLights[4] );
+
+	// Enable or disable IES light profile.
+	if( mProfileTexture ) {
+		point->enableModulation( true );
+	}
+	else
+		point->enableModulation( false );
+
 	// Animate light sources.
 	if( mAnimateLights ) {
 		float t = 0.25f * float( getElapsedSeconds() );
@@ -276,20 +299,20 @@ void LightsApp::update()
 		float x = 5.0f * math<float>::cos( 2.7f * t );
 		float y = 4.0f * math<float>::sin( 0.4f * t );
 		float z = 5.0f * math<float>::cos( t );
-		dynamic_pointer_cast<SpotLight>( mLights[0] )->setPosition( vec3( -x, 9.0f, -z ) );
-		dynamic_pointer_cast<SpotLight>( mLights[0] )->pointAt( vec3( x, 5.0f + y, z ) );
+		spot->setPosition( vec3( -x, 9.0f, -z ) );
+		spot->pointAt( vec3( x, 5.0f + y, z ) );
 
-		dynamic_pointer_cast<WedgeLight>( mLights[3] )->setLengthAndAxis( vec3( y - 5, 9, 15 ), vec3( y + 5, 9, 15 ) );
-		dynamic_pointer_cast<WedgeLight>( mLights[3] )->pointAt( vec3( x, 5.0f + y, z ) );
+		wedge->setLengthAndAxis( vec3( y - 5, 9, 15 ), vec3( y + 5, 9, 15 ) );
+		wedge->pointAt( vec3( x, 5.0f + y, z ) );
 
 		x = 5.0f * cosf( t );
-		y = 2.5f + 2.5f * cosf( t );
+		y = 5.0f + 4.0f * cosf( t );
 		z = 5.0f * sinf( t );
-		dynamic_pointer_cast<PointLight>( mLights[1] )->setPosition( vec3( x, y, z ) );
+		point->setPosition( vec3( x, y, z ) );
 
 		x = 5.0f * math<float>::cos( t );
 		z = 5.0f * math<float>::sin( t );
-		dynamic_pointer_cast<CapsuleLight>( mLights[2] )->setLengthAndAxis( vec3( 5.0f + x, 5.0f, z ), vec3( 5.0f - x, 5.0f, -z ) );
+		capsule->setLengthAndAxis( vec3( 5.0f + x, 5.0f, z ), vec3( 5.0f - x, 5.0f, -z ) );
 	}
 
 	// Animate object.
@@ -307,6 +330,8 @@ void LightsApp::update()
 			if( mLights[i]->isVisible() )
 				mSketch->light( mLights[i] );
 		}
+
+		mSketch->coordinateFrame( ROOM_SIZE / 2 );
 	}
 }
 
@@ -358,7 +383,8 @@ void LightsApp::draw()
 
 		// Bind textures and render.
 		gl::ScopedTextureBind gobo( mModulationTexture, (uint8_t) 1 );
-		gl::ScopedTextureBind shadowmap( mShadowMap->getTexture(), (uint8_t) 2 );
+		gl::ScopedTextureBind profile( mProfileTexture, (uint8_t) 2 );
+		gl::ScopedTextureBind shadowmap( mShadowMap->getTexture(), (uint8_t) 3 );
 		render( false );
 
 		gl::popMatrices();
@@ -505,7 +531,8 @@ void LightsApp::keyDown( KeyEvent event )
 			// Uniforms.
 			mShader->uniformBlock( "uLights", 0 );
 			mShader->uniform( "uModulationMap[0]", 1 );
-			mShader->uniform( "uShadowMap[0]", 2 );
+			mShader->uniform( "uModulationMap[1]", 2 );
+			mShader->uniform( "uShadowMap[0]", 3 );
 
 			// Batches.
 			mRoom->replaceGlslProg( mShader );
@@ -527,14 +554,17 @@ void LightsApp::fileDrop( FileDropEvent event )
 {
 	const fs::path& path = event.getFile( 0 );
 	if( path.extension() == ".ies" ) {
-		Timer t1( true );
-		mProfile = LightProfile::create( loadFile( path ) );
-		t1.stop();
-		Timer t2( true );
-		mProfileTexture = mProfile->createTexture();
-		t2.stop();
+		try {
+			Timer t1( true );
+			mProfile = LightProfile::create( loadFile( path ) );
+			t1.stop();
+			Timer t2( true );
+			mProfileTexture = mProfile->createTexture();
+			t2.stop();
 
-		console() << "Load:" << t1.getSeconds() << ", Parse:" << t2.getSeconds() << std::endl;
+			console() << "Load:" << t1.getSeconds() << ", Parse:" << t2.getSeconds() << std::endl;
+		}
+		catch( ... ) {}
 	}
 }
 
@@ -543,7 +573,7 @@ void LightsApp::render( bool onlyShadowCasters )
 	gl::pushModelMatrix();
 
 	if( onlyShadowCasters ) {
-		gl::translate( vec3( 0, 50, 0 ) );
+		gl::translate( vec3( 0, ROOM_SIZE, 0 ) );
 		mRoomShadow->draw();
 		gl::setModelMatrix( mTransform );
 		mObjectShadow->draw();
@@ -552,7 +582,7 @@ void LightsApp::render( bool onlyShadowCasters )
 		gl::enableFaceCulling();
 
 		gl::cullFace( GL_FRONT );
-		gl::translate( vec3( 0, 50, 0 ) );
+		gl::translate( vec3( 0, ROOM_SIZE, 0 ) );
 		mRoom->draw();
 
 		gl::cullFace( GL_BACK );
