@@ -7,6 +7,7 @@
 #include "cinder/msw/CinderMsw.h"
 #include "cinder/msw/CinderMswCom.h"
 #include "cinder/evr/IPlayer.h"
+#include "cinder/evr/IRenderer.h"
 #include "cinder/evr/DirectShowVideo.h"
 
 #include <dshow.h>
@@ -15,7 +16,7 @@ namespace cinder {
 namespace msw {
 namespace video {
 
-//! Definitions
+//! Definitions.
 typedef void ( CALLBACK *GraphEventFN )( HWND hwnd, long eventCode, LONG_PTR param1, LONG_PTR param2 );
 
 //!
@@ -37,6 +38,8 @@ public:
 	STDMETHODIMP_( ULONG ) Release() override;
 
 	// IPlayer methods
+	HRESULT SetVideoRenderer( IRenderer *pVideo ) override;
+
 	HRESULT OpenFile( PCWSTR pszFileName ) override;
 	HRESULT Close() override;
 
@@ -51,10 +54,10 @@ public:
 
 	BOOL    CheckNewFrame() const override { return m_pVideo->CheckNewFrame(); }
 
-	bool CreateSharedTexture( int w, int h, int textureID ) override { return m_pVideo->CreateSharedTexture( w, h, textureID ); }
-	void ReleaseSharedTexture( int textureID ) override { m_pVideo->ReleaseSharedTexture( textureID ); }
-	bool LockSharedTexture( int *pTextureID ) override { return m_pVideo->LockSharedTexture( pTextureID ); }
-	bool UnlockSharedTexture( int textureID ) override { return m_pVideo->UnlockSharedTexture( textureID ); }
+	bool    CreateSharedTexture( int w, int h, int textureID ) override { return m_pVideo->CreateSharedTexture( w, h, textureID ); }
+	void    ReleaseSharedTexture( int textureID ) override { m_pVideo->ReleaseSharedTexture( textureID ); }
+	bool    LockSharedTexture( int *pTextureID ) override { return m_pVideo->LockSharedTexture( pTextureID ); }
+	bool    UnlockSharedTexture( int textureID ) override { return m_pVideo->UnlockSharedTexture( textureID ); }
 
 	//
 	PlayerState State() const { return m_state; }
@@ -69,7 +72,7 @@ public:
 private:
 	HRESULT InitializeGraph();
 	void    TearDownGraph();
-	HRESULT CreateVideoRenderer();
+	//HRESULT CreateVideoRenderer();
 	HRESULT RenderStreams( IBaseFilter *pSource );
 
 	PlayerState      m_state;

@@ -1934,7 +1934,7 @@ HRESULT EVRCustomPresenter::CreateOptimalVideoType( IMFMediaType* pProposedType,
 
 		// Determine the size (width & height) of the video.
 		AM_MEDIA_TYPE* pAMMedia = nullptr;
-		LARGE_INTEGER  i64Size;
+		//LARGE_INTEGER  i64Size;
 		MFVIDEOFORMAT* VideoFormat;
 
 		hr = pProposedType->GetRepresentation( FORMAT_MFVideoFormat, (void**) &pAMMedia );

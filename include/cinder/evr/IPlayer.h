@@ -10,13 +10,18 @@ namespace cinder {
 namespace msw {
 namespace video {
 
-//! Definitions
+//! Definitions.
 const UINT WM_PLAYER_EVENT = WM_APP + 1;
+
+// Forward declarations.
+class IRenderer;
 
 class IPlayer : public IUnknown {
 public:
 	IPlayer() {}
 	virtual ~IPlayer() {}
+
+	virtual HRESULT SetVideoRenderer( IRenderer *pVideo ) =0;
 
 	virtual HRESULT OpenFile( PCWSTR pszFileName ) = 0;
 	virtual HRESULT Close() = 0;

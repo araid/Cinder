@@ -7,6 +7,7 @@
 #include "cinder/msw/CinderMsw.h"
 #include "cinder/msw/CinderMswCom.h"
 #include "cinder/evr/IPlayer.h"
+#include "cinder/evr/IRenderer.h"
 #include "cinder/evr/MediaFoundationVideo.h"
 
 namespace cinder {
@@ -30,22 +31,8 @@ public:
 	~MediaFoundationPlayer();
 
 	// IPlayer methods
-	bool CreateSharedTexture( int w, int h, int textureID ) override { return mPresenterPtr->CreateSharedTexture( w, h, textureID ); }
-	void ReleaseSharedTexture( int textureID ) override { mPresenterPtr->ReleaseSharedTexture( textureID ); }
-	bool LockSharedTexture( int *pTextureID ) override { return mPresenterPtr->LockSharedTexture( pTextureID ); }
-	bool UnlockSharedTexture( int textureID ) override { return mPresenterPtr->UnlockSharedTexture( textureID ); }
+	HRESULT SetVideoRenderer( IRenderer *pVideo ) override { return E_NOTIMPL; }
 
-protected:
-	// IUnknown methods
-	STDMETHODIMP QueryInterface( REFIID iid, void** ppv ) override;
-	STDMETHODIMP_( ULONG ) AddRef() override;
-	STDMETHODIMP_( ULONG ) Release() override;
-
-	// IMFAsyncCallback methods
-	STDMETHODIMP  GetParameters( DWORD*, DWORD* ) override { return E_NOTIMPL; } // Implementation of this method is optional.
-	STDMETHODIMP  Invoke( IMFAsyncResult* pAsyncResult ) override;
-
-	// IPlayer methods
 	HRESULT OpenFile( PCWSTR pszFileName ) override;
 	HRESULT Close() override;
 
@@ -60,8 +47,22 @@ protected:
 
 	BOOL    CheckNewFrame() const override { return mPresenterPtr->CheckNewFrame(); }
 
-	//
+	bool    CreateSharedTexture( int w, int h, int textureID ) override { return mPresenterPtr->CreateSharedTexture( w, h, textureID ); }
+	void    ReleaseSharedTexture( int textureID ) override { mPresenterPtr->ReleaseSharedTexture( textureID ); }
+	bool    LockSharedTexture( int *pTextureID ) override { return mPresenterPtr->LockSharedTexture( pTextureID ); }
+	bool    UnlockSharedTexture( int textureID ) override { return mPresenterPtr->UnlockSharedTexture( textureID ); }
 
+protected:
+	// IUnknown methods
+	STDMETHODIMP QueryInterface( REFIID iid, void** ppv ) override;
+	STDMETHODIMP_( ULONG ) AddRef() override;
+	STDMETHODIMP_( ULONG ) Release() override;
+
+	// IMFAsyncCallback methods
+	STDMETHODIMP  GetParameters( DWORD*, DWORD* ) override { return E_NOTIMPL; } // Implementation of this method is optional.
+	STDMETHODIMP  Invoke( IMFAsyncResult* pAsyncResult ) override;
+
+	//
 	HRESULT CreateSession();
 	HRESULT CloseSession();
 	HRESULT CreatePartialTopology( IMFPresentationDescriptor *pPD );// { return E_NOTIMPL; }

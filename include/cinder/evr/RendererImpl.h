@@ -151,7 +151,7 @@ public:
 protected:
 	MovieBase();
 
-	virtual void  init( const std::wstring &url );
+	virtual void  init( const std::wstring &url ) = 0;
 	virtual void  initFromUrl( const Url& url ) { init( toWideString( url.str() ) ); }
 	virtual void  initFromPath( const fs::path& filePath ) { init( toWideString( filePath.string() ) ); }
 	//virtual void  initFromLoader( const MovieLoader& loader );
@@ -178,10 +178,8 @@ protected:
 
 protected:
 	IPlayer*					mPlayer;
+	IRenderer*					mRenderer;
 	HWND						mHwnd;
-
-	// TODO: textures should be managed elsewhere, not in here!
-	std::map<int, gl::Texture2dRef>	mTextures;
 
 	uint32_t					mWidth, mHeight;
 	uint32_t					mFrameCount;
@@ -202,6 +200,18 @@ protected:
 
 	//! Keeps track of each player's window.
 	static std::map<HWND, MovieBase*> sMovieWindows;
+};
+
+class MovieSurface : public MovieBase {
+public:
+	MovieSurface();
+	MovieSurface( const Url& url );
+	MovieSurface( const fs::path& path );
+
+	~MovieSurface();
+private:
+	void init( const std::wstring& url );
+
 };
 
 } // namespace video

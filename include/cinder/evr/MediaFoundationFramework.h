@@ -33,6 +33,28 @@ namespace cinder {
 namespace msw {
 namespace video {
 
+template <class Q>
+HRESULT GetEventObject( IMFMediaEvent *pEvent, Q **ppObject )
+{
+	*ppObject = NULL;
+
+	PROPVARIANT var;
+	HRESULT hr = pEvent->GetValue( &var );
+	if( SUCCEEDED( hr ) ) {
+		if( var.vt == VT_UNKNOWN ) {
+			hr = var.punkVal->QueryInterface( ppObject );
+		}
+		else {
+			hr = MF_E_INVALIDTYPE;
+		}
+		PropVariantClear( &var );
+	}
+
+	return hr;
+}
+
+//-----------------------------------------------------------------------------
+
 inline LONG MFTimeToMsec( const LONGLONG& time )
 {
 	return (LONG) ( time / ( 10000000 / 1000 ) );

@@ -17,26 +17,6 @@ namespace cinder {
 namespace msw {
 namespace video {
 
-template <class Q>
-HRESULT GetEventObject( IMFMediaEvent *pEvent, Q **ppObject )
-{
-	*ppObject = NULL;
-
-	PROPVARIANT var;
-	HRESULT hr = pEvent->GetValue( &var );
-	if( SUCCEEDED( hr ) ) {
-		if( var.vt == VT_UNKNOWN ) {
-			hr = var.punkVal->QueryInterface( ppObject );
-		}
-		else {
-			hr = MF_E_INVALIDTYPE;
-		}
-		PropVariantClear( &var );
-	}
-
-	return hr;
-}
-
 //////////////////////////////////////////////////////////////////////////////////////////
 
 MediaFoundationPlayer::MediaFoundationPlayer( HRESULT &hr, HWND hwnd )

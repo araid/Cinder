@@ -61,6 +61,19 @@ ULONG DirectShowPlayer::Release()
 	return uCount;
 }
 
+HRESULT DirectShowPlayer::SetVideoRenderer( IRenderer *pVideo )
+{
+	if( pVideo == NULL )
+		return E_POINTER;
+
+	m_pVideo = dynamic_cast<VideoRenderer*>( pVideo );
+
+	if( m_pVideo == NULL )
+		return E_INVALIDARG;
+
+	return S_OK;
+}
+
 // Open a media file for playback.
 HRESULT DirectShowPlayer::OpenFile( PCWSTR pszFileName )
 {
@@ -334,12 +347,12 @@ void DirectShowPlayer::TearDownGraph()
 	SafeRelease( m_pControl );
 	SafeRelease( m_pEvent );
 
-	SafeDelete( m_pVideo );
+	//SafeDelete( m_pVideo ); // We no longer own this pointer, so leave it alone.
 
 	m_state = STATE_NO_GRAPH;
 }
 
-
+/*
 HRESULT DirectShowPlayer::CreateVideoRenderer()
 {
 	HRESULT hr = E_FAIL;
@@ -376,7 +389,7 @@ HRESULT DirectShowPlayer::CreateVideoRenderer()
 	}
 	return hr;
 }
-
+*/
 
 // Render the streams from a source filter. 
 
@@ -392,7 +405,8 @@ HRESULT DirectShowPlayer::RenderStreams( IBaseFilter *pSource )
 		BREAK_ON_FAIL( hr );
 
 		// Add the video renderer to the graph
-		hr = CreateVideoRenderer();
+		assert( m_pVideo != NULL );
+		hr = m_pVideo->AddToGraph( m_pGraph, m_hwnd );
 		BREAK_ON_FAIL( hr );
 
 		// Add the DSound Renderer to the graph.

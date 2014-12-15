@@ -7,6 +7,7 @@
 #include "cinder/msw/CinderMsw.h"
 #include "cinder/msw/CinderMswCom.h"
 #include "cinder/evr/MediaFoundationVideo.h"
+#include "cinder/evr/IRenderer.h"
 
 #include <dshow.h>
 #include <d3d9.h>
@@ -23,7 +24,7 @@ HRESULT AddFilterByCLSID( IGraphBuilder *pGraph, REFGUID clsid, IBaseFilter **pp
 
 // Abstract class to manage the video renderer filter.
 // Specific implementations handle the VMR-7, VMR-9, or EVR filter.
-class VideoRenderer {
+class VideoRenderer : public IRenderer {
 public:
 	virtual ~VideoRenderer() {};
 	virtual BOOL    HasVideo() const = 0;

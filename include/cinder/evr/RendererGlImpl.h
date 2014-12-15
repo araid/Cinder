@@ -57,23 +57,22 @@ public:
 	//! Returns the gl::Texture representing the Movie's current frame, bound to the \c GL_TEXTURE_RECTANGLE_ARB target
 	//gl::TextureRef	getTexture();
 
-	//!
-	void draw( int x = 0, int y = 0 ) { draw( x, y, mWidth, mHeight ); }
-	//!
-	void draw( int x, int y, int w, int h );
+	//! TODO: get rid of this and use getTexture() once we get the shared texture issue resolved.
+	void draw( float x = 0, float y = 0 ) { draw( x, y, (float) mWidth, (float) mHeight ); }
+	//! TODO: get rid of this and use getTexture() once we get the shared texture issue resolved.
+	void draw( float x, float y, float w, float h );
 
 protected:
 	MovieGl();
 	MovieGl( const Url& url );
 	MovieGl( const fs::path& path );
 
-	void  initFromUrl( const Url& url ) override;
-	void  initFromPath( const fs::path& filePath ) override;
-	//MovieGl( const MovieLoader& loader );
-
-	//virtual HRESULT createPartialTopology( IMFPresentationDescriptor *pPD ) override;
+	void  init( const std::wstring &url ) override;
 
 protected:
+	// TODO: textures should be managed elsewhere, not in here!
+	std::map<int, gl::Texture2dRef>	mTextures;
+
 	gl::GlslProgRef          mShader;
 };
 
