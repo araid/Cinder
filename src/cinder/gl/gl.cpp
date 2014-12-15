@@ -1965,6 +1965,12 @@ ScopedState::~ScopedState() {
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 // ScopedColor
+ScopedColor::ScopedColor()
+	: mCtx( gl::context() )
+{
+	mColor = mCtx->getCurrentColor();
+}
+
 ScopedColor::ScopedColor( const ColorAf &color )
 	: mCtx( gl::context() )
 {

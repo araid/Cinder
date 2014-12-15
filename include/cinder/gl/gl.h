@@ -62,8 +62,6 @@
 #endif
 #include <boost/noncopyable.hpp>
 
-#include "cinder/gl/Texture.h"
-
 #include "cinder/Area.h"
 #include "cinder/Rect.h"
 #include "cinder/AxisAlignedBox.h"
@@ -483,6 +481,7 @@ struct ScopedState : public boost::noncopyable {
 };
 
 struct ScopedColor : public boost::noncopyable {
+	ScopedColor();
 	ScopedColor( const ColorAf &color );
 	ScopedColor( float r, float g, float b, float a = 1.0f );
 	~ScopedColor();

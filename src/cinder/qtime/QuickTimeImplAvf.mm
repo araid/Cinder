@@ -648,8 +648,8 @@ void MovieBase::updateFrame()
 			
 			CVImageBufferRef buffer = nil;
 			buffer = [mPlayerVideoOutput copyPixelBufferForItemTime:[mPlayerItem currentTime] itemTimeForDisplay:nil];
-			if (buffer) {
-				newFrame(buffer);
+			if( buffer ) {
+				newFrame( buffer );
 				mSignalNewFrame();
 			}
 		}
@@ -842,15 +842,15 @@ bool MovieSurface::hasAlpha() const
 		}
 	}
 	
-	return mSurface.hasAlpha();
+	return mSurface->hasAlpha();
 }
 
-Surface MovieSurface::getSurface()
+Surface8uRef MovieSurface::getSurface()
 {
 	updateFrame();
 	
 	lock();
-	Surface result = mSurface;
+	Surface8uRef result = mSurface;
 	unlock();
 	
 	return result;
