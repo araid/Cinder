@@ -110,6 +110,8 @@ public:
 	void ReleaseSharedTexture( int textureID ) override { assert( m_pPresenter != NULL ); m_pPresenter->ReleaseSharedTexture( textureID ); }
 	bool LockSharedTexture( int *pTextureID ) override { assert( m_pPresenter != NULL ); return m_pPresenter->LockSharedTexture( pTextureID ); }
 	bool UnlockSharedTexture( int textureID ) override { assert( m_pPresenter != NULL ); return m_pPresenter->UnlockSharedTexture( textureID ); }
+
+	EVRCustomPresenter* GetPresenter() { return m_pPresenter; }
 };
 
 

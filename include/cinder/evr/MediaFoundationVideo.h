@@ -32,7 +32,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #if defined( CINDER_MSW )
 
-#include "MediaFoundationFramework.h"
+#include "cinder/evr/IRenderer.h"
+#include "cinder/evr/MediaFoundationFramework.h"
 
 namespace cinder {
 namespace msw {
@@ -162,6 +163,7 @@ static const GUID MFSamplePresenter_SampleSwapChain =
 { 0xad885bd1, 0x7def, 0x414a, { 0xb5, 0xb0, 0xd3, 0xd2, 0x63, 0xd6, 0xe9, 0x6d } };
 
 class __declspec( uuid( "9A6E430D-27EE-4DBB-9A7F-7782EA4036A0" ) ) EVRCustomPresenter :
+	public IRenderer,
 	public IMFVideoDeviceID,
 	public IMFVideoPresenter, // Inherits IMFClockStateSink
 	public IMFRateSupport,

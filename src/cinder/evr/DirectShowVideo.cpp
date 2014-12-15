@@ -321,6 +321,11 @@ HRESULT InitWindowlessVMR9(
 RendererEVR::RendererEVR()
 	: m_pEVR( NULL ), m_pVideoDisplay( NULL ), m_pPresenter( NULL )
 {
+	HRESULT hr = S_OK;
+
+	// Create custom EVR presenter.
+	m_pPresenter = new EVRCustomPresenter( hr );
+	m_pPresenter->AddRef();
 }
 
 RendererEVR::~RendererEVR()
@@ -337,16 +342,11 @@ BOOL RendererEVR::HasVideo() const
 
 HRESULT RendererEVR::AddToGraph( IGraphBuilder *pGraph, HWND hwnd )
 {
-	assert( m_pPresenter == NULL );
-	assert( m_pEVR == NULL );
-
 	HRESULT hr = S_OK;
 
 	do {
-		// Create custom EVR presenter.
-		m_pPresenter = new EVRCustomPresenter( hr );
-		m_pPresenter->AddRef();
-		BREAK_ON_FAIL( hr );
+		BREAK_ON_NULL( m_pPresenter, E_POINTER );
+		BREAK_IF_FALSE( m_pEVR == NULL, E_POINTER );
 
 		hr = m_pPresenter->SetVideoWindow( hwnd );
 		BREAK_ON_FAIL( hr );
@@ -373,7 +373,6 @@ HRESULT RendererEVR::AddToGraph( IGraphBuilder *pGraph, HWND hwnd )
 	if( FAILED( hr ) ) {
 		SafeRelease( m_pVideoDisplay );
 		SafeRelease( m_pEVR );
-		SafeRelease( m_pPresenter );
 	}
 
 	return hr;
@@ -390,7 +389,6 @@ HRESULT RendererEVR::FinalizeGraph( IGraphBuilder *pGraph )
 	if( bRemoved ) {
 		SafeRelease( m_pVideoDisplay );
 		SafeRelease( m_pEVR );
-		SafeRelease( m_pPresenter );
 	}
 	return hr;
 }

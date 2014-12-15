@@ -9,6 +9,7 @@
 #include "cinder/evr/IPlayer.h"
 #include "cinder/evr/IRenderer.h"
 #include "cinder/evr/MediaFoundationVideo.h"
+#include "cinder/evr/DirectShowVideo.h" // For RendererEVR
 
 namespace cinder {
 namespace msw {
@@ -31,7 +32,7 @@ public:
 	~MediaFoundationPlayer();
 
 	// IPlayer methods
-	HRESULT SetVideoRenderer( IRenderer *pVideo ) override { return E_NOTIMPL; }
+	HRESULT SetVideoRenderer( IRenderer *pVideo ) override;
 
 	HRESULT OpenFile( PCWSTR pszFileName ) override;
 	HRESULT Close() override;
@@ -94,7 +95,7 @@ protected:
 	IMFVideoDisplayControl*  mVideoDisplayControlPtr;
 	IMFAudioStreamVolume*    mAudioStreamVolumePtr;
 
-	EVRCustomPresenter*      mPresenterPtr;
+	RendererEVR*             mPresenterPtr;
 
 	HWND                     mHwnd;
 	PlayerState              mState;

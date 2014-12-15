@@ -1,5 +1,4 @@
 #include "cinder/evr/MediaFoundationPlayer.h"
-#include "cinder/evr/MediaFoundationVideo.h"
 
 #include "cinder/CinderAssert.h"
 #include "cinder/Log.h"
@@ -34,26 +33,13 @@ MediaFoundationPlayer::MediaFoundationPlayer( HRESULT &hr, HWND hwnd )
 		BREAK_ON_FAIL( hr );
 
 		mIsInitialized = true;
-
-		// Create custom EVR presenter.
-		mPresenterPtr = new EVRCustomPresenter( hr );
-		mPresenterPtr->AddRef();
-		BREAK_ON_FAIL( hr );
-
-		hr = mPresenterPtr->SetVideoWindow( mHwnd );
-		BREAK_ON_FAIL( hr );
 	} while( false );
-
-	if( FAILED( hr ) )
-		SafeRelease( mPresenterPtr );
 
 	CI_LOG_V( "Created MediaFoundationPlayer." );
 }
 
 MediaFoundationPlayer::~MediaFoundationPlayer()
 {
-	SafeRelease( mPresenterPtr );
-
 	if( mIsInitialized )
 		MFShutdown();
 
@@ -63,6 +49,19 @@ MediaFoundationPlayer::~MediaFoundationPlayer()
 	CloseHandle( mOpenEventHandle );
 
 	CI_LOG_V( "Destroyed MediaFoundationPlayer." );
+}
+
+HRESULT MediaFoundationPlayer::SetVideoRenderer( IRenderer *pVideo )
+{
+	if( pVideo == NULL )
+		return E_POINTER;
+
+	mPresenterPtr = dynamic_cast<RendererEVR*>( pVideo );
+
+	if( mPresenterPtr == NULL )
+		return E_INVALIDARG;
+
+	return S_OK;
 }
 
 HRESULT MediaFoundationPlayer::OpenFile( LPCWSTR pszFileName )
@@ -197,8 +196,12 @@ HRESULT MediaFoundationPlayer::CreatePartialTopology( IMFPresentationDescriptor 
 	HRESULT hr = S_OK;
 
 	do {
+		BREAK_ON_NULL( mPresenterPtr, E_POINTER );
+		hr = mPresenterPtr->GetPresenter()->SetVideoWindow( mHwnd );
+		BREAK_ON_FAIL( hr );
+
 		ScopedComPtr<IMFTopology> pTopology;
-		hr = CreatePlaybackTopology( mMediaSourcePtr, pPD, mHwnd, &pTopology, mPresenterPtr );
+		hr = CreatePlaybackTopology( mMediaSourcePtr, pPD, mHwnd, &pTopology, mPresenterPtr->GetPresenter() );
 		BREAK_ON_FAIL( hr );
 
 		hr = SetMediaInfo( pPD );
