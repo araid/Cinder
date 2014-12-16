@@ -1,6 +1,6 @@
 #define  MFV_LOCK_ONCE 1
 
-#include "cinder/evr/MediaFoundationVideo.h"
+#include "cinder/evr/EVRCustomPresenter.h"
 #include "cinder/Log.h"
 
 #if defined(CINDER_MSW)

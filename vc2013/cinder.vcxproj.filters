@@ -753,19 +753,19 @@
     <ClCompile Include="..\src\cinder\evr\RendererGlImpl.cpp">
       <Filter>Source Files\evr</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\cinder\evr\DirectShowVideo.cpp">
-      <Filter>Source Files\evr</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\cinder\evr\DirectShowPlayer.cpp">
       <Filter>Source Files\evr</Filter>
     </ClCompile>
     <ClCompile Include="..\src\cinder\evr\MediaFoundationPlayer.cpp">
       <Filter>Source Files\evr</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\cinder\evr\MediaFoundationVideo.cpp">
+    <ClCompile Include="..\src\cinder\evr\RendererImpl.cpp">
       <Filter>Source Files\evr</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\cinder\evr\RendererImpl.cpp">
+    <ClCompile Include="..\src\cinder\evr\VideoRenderer.cpp">
+      <Filter>Source Files\evr</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cinder\evr\EVRCustomPresenter.cpp">
       <Filter>Source Files\evr</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1616,9 +1616,6 @@
     <ClInclude Include="..\include\cinder\msw\CinderMswCom.h">
       <Filter>Header Files\msw</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\cinder\evr\DirectShowVideo.h">
-      <Filter>Header Files\evr</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\cinder\evr\DirectShowPlayer.h">
       <Filter>Header Files\evr</Filter>
     </ClInclude>
@@ -1628,13 +1625,13 @@
     <ClInclude Include="..\include\cinder\evr\MediaFoundationFramework.h">
       <Filter>Header Files\evr</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\cinder\evr\IPlayer.h">
+    <ClInclude Include="..\include\cinder\evr\VideoRenderer.h">
       <Filter>Header Files\evr</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\cinder\evr\MediaFoundationVideo.h">
+    <ClInclude Include="..\include\cinder\evr\VideoPlayer.h">
       <Filter>Header Files\evr</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\cinder\evr\IRenderer.h">
+    <ClInclude Include="..\include\cinder\evr\EVRCustomPresenter.h">
       <Filter>Header Files\evr</Filter>
     </ClInclude>
   </ItemGroup>

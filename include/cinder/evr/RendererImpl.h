@@ -35,7 +35,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "cinder/CinderAssert.h"
 #include "cinder/Log.h"
 #include "cinder/msw/CinderMsw.h"
-#include "cinder/evr/IPlayer.h"
+#include "cinder/evr/VideoPlayer.h"
 
 // TEMP
 #include "cinder/gl/Texture.h"
@@ -177,8 +177,8 @@ protected:
 	static LRESULT CALLBACK WndProcDummy( HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam );
 
 protected:
-	IPlayer*					mPlayer;
-	IRenderer*					mRenderer;
+	VideoPlayer*					mPlayer;
+	VideoRenderer*				mRenderer;
 	HWND						mHwnd;
 
 	uint32_t					mWidth, mHeight;

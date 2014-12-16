@@ -1,5 +1,5 @@
 #include "cinder/evr/DirectShowPlayer.h"
-#include "cinder/evr/DirectShowVideo.h"
+#include "cinder/evr/VideoRenderer.h"
 #include "cinder/Log.h"
 
 #if defined(CINDER_MSW)
@@ -61,15 +61,12 @@ ULONG DirectShowPlayer::Release()
 	return uCount;
 }
 
-HRESULT DirectShowPlayer::SetVideoRenderer( IRenderer *pVideo )
+HRESULT DirectShowPlayer::SetVideoRenderer( VideoRenderer *pVideo )
 {
 	if( pVideo == NULL )
 		return E_POINTER;
 
-	m_pVideo = dynamic_cast<VideoRenderer*>( pVideo );
-
-	if( m_pVideo == NULL )
-		return E_INVALIDARG;
+	m_pVideo = pVideo;
 
 	return S_OK;
 }

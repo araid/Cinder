@@ -6,9 +6,8 @@
 
 #include "cinder/msw/CinderMsw.h"
 #include "cinder/msw/CinderMswCom.h"
-#include "cinder/evr/IPlayer.h"
-#include "cinder/evr/IRenderer.h"
-#include "cinder/evr/DirectShowVideo.h"
+#include "cinder/evr/VideoPlayer.h"
+#include "cinder/evr/VideoRenderer.h"
 
 #include <dshow.h>
 
@@ -20,7 +19,7 @@ namespace video {
 typedef void ( CALLBACK *GraphEventFN )( HWND hwnd, long eventCode, LONG_PTR param1, LONG_PTR param2 );
 
 //!
-class DirectShowPlayer : public IPlayer {
+class DirectShowPlayer : public VideoPlayer {
 	typedef enum PlayerState {
 		STATE_NO_GRAPH,
 		STATE_RUNNING,
@@ -37,8 +36,8 @@ public:
 	STDMETHODIMP_( ULONG ) AddRef() override;
 	STDMETHODIMP_( ULONG ) Release() override;
 
-	// IPlayer methods
-	HRESULT SetVideoRenderer( IRenderer *pVideo ) override;
+	// VideoPlayer methods
+	HRESULT SetVideoRenderer( VideoRenderer *pVideo ) override;
 
 	HRESULT OpenFile( PCWSTR pszFileName ) override;
 	HRESULT Close() override;

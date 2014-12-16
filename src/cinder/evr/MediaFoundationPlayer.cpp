@@ -51,11 +51,12 @@ MediaFoundationPlayer::~MediaFoundationPlayer()
 	CI_LOG_V( "Destroyed MediaFoundationPlayer." );
 }
 
-HRESULT MediaFoundationPlayer::SetVideoRenderer( IRenderer *pVideo )
+HRESULT MediaFoundationPlayer::SetVideoRenderer( VideoRenderer *pVideo )
 {
 	if( pVideo == NULL )
 		return E_POINTER;
 
+	// Only support EVR renderer.
 	mPresenterPtr = dynamic_cast<RendererEVR*>( pVideo );
 
 	if( mPresenterPtr == NULL )

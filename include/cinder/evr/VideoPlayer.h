@@ -14,14 +14,14 @@ namespace video {
 const UINT WM_PLAYER_EVENT = WM_APP + 1;
 
 // Forward declarations.
-class IRenderer;
+class VideoRenderer;
 
-class IPlayer : public IUnknown {
+class VideoPlayer : public IUnknown {
 public:
-	IPlayer() {}
-	virtual ~IPlayer() {}
+	VideoPlayer() {}
+	virtual ~VideoPlayer() {}
 
-	virtual HRESULT SetVideoRenderer( IRenderer *pVideo ) =0;
+	virtual HRESULT SetVideoRenderer( VideoRenderer *pVideo ) = 0;
 
 	virtual HRESULT OpenFile( PCWSTR pszFileName ) = 0;
 	virtual HRESULT Close() = 0;

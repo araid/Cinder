@@ -6,16 +6,15 @@
 
 #include "cinder/msw/CinderMsw.h"
 #include "cinder/msw/CinderMswCom.h"
-#include "cinder/evr/IPlayer.h"
-#include "cinder/evr/IRenderer.h"
-#include "cinder/evr/MediaFoundationVideo.h"
-#include "cinder/evr/DirectShowVideo.h" // For RendererEVR
+#include "cinder/evr/VideoPlayer.h"
+#include "cinder/evr/VideoRenderer.h"
+#include "cinder/evr/EVRCustomPresenter.h"
 
 namespace cinder {
 namespace msw {
 namespace video {
 
-class MediaFoundationPlayer : public IMFAsyncCallback, public IPlayer {
+class MediaFoundationPlayer : public IMFAsyncCallback, public VideoPlayer {
 public:
 	typedef enum PlayerState {
 		Closed = 0,
@@ -31,8 +30,8 @@ public:
 	MediaFoundationPlayer( HRESULT &hr, HWND hwnd );
 	~MediaFoundationPlayer();
 
-	// IPlayer methods
-	HRESULT SetVideoRenderer( IRenderer *pVideo ) override;
+	// VideoPlayer methods
+	HRESULT SetVideoRenderer( VideoRenderer *pVideo ) override;
 
 	HRESULT OpenFile( PCWSTR pszFileName ) override;
 	HRESULT Close() override;

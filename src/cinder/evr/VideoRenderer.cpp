@@ -5,8 +5,8 @@
 //
 // Copyright (c) Microsoft Corporation. All rights reserved.
 
-#include "cinder/evr/DirectShowVideo.h"
-#include "cinder/evr/MediaFoundationVideo.h"
+#include "cinder/evr/VideoRenderer.h"
+#include "cinder/evr/EVRCustomPresenter.h"
 #include "cinder/Log.h"
 
 #if defined(CINDER_MSW)
@@ -19,7 +19,8 @@ namespace video {
 
 /// VMR-7 Wrapper
 
-RendererVMR7::RendererVMR7() : m_pWindowless( NULL )
+RendererVMR7::RendererVMR7() 
+	: m_pWindowless( NULL )
 {
 
 }
