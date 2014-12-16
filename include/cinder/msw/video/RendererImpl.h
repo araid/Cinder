@@ -35,7 +35,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "cinder/CinderAssert.h"
 #include "cinder/Log.h"
 #include "cinder/msw/CinderMsw.h"
-#include "cinder/evr/VideoPlayer.h"
+#include "cinder/msw/video/VideoPlayer.h"
 
 // TEMP
 #include "cinder/gl/Texture.h"
@@ -202,13 +202,21 @@ protected:
 	static std::map<HWND, MovieBase*> sMovieWindows;
 };
 
+typedef std::shared_ptr<class MovieSurface> MovieSurfaceRef;
+
 class MovieSurface : public MovieBase {
 public:
 	MovieSurface();
 	MovieSurface( const Url& url );
 	MovieSurface( const fs::path& path );
 
+	static MovieSurfaceRef create( const Url& url ) { return std::shared_ptr<MovieSurface>( new MovieSurface( url ) ); }
+	static MovieSurfaceRef create( const fs::path& path ) { return std::shared_ptr<MovieSurface>( new MovieSurface( path ) ); }
+	//static MovieSurfaceRef create( const MovieLoaderRef &loader ) { return std::shared_ptr<MovieSurface>( new MovieSurface( *loader ) ); }
+
 	~MovieSurface();
+
+	void draw( float x = 0, float y = 0 ) {}
 private:
 	void init( const std::wstring& url );
 

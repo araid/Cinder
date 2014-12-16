@@ -29,7 +29,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #if defined( CINDER_MSW )
 
-#include "cinder/evr/RendererImpl.h"
+#include "cinder/msw/video/RendererImpl.h"
 
 #include "cinder/gl/gl.h"
 #include "cinder/gl/GlslProg.h"

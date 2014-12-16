@@ -6,8 +6,11 @@
 #include "cinder/Log.h"
 #include "cinder/Utilities.h"
 
-#include "cinder/evr/RendererGlImpl.h"
+#include "cinder/msw/video/RendererGlImpl.h"
 #include "cinder/gl/Query.h"
+
+#define MOVIE    video::MovieSurface
+#define MOVIEREF video::MovieSurfaceRef
 
 using namespace ci;
 using namespace ci::app;
@@ -31,7 +34,7 @@ public:
 
 	bool playVideo( const fs::path &path );
 private:
-	video::MovieGlRef        mMovieRef;
+	MOVIEREF        mMovieRef;
 	glm::mat4                mTransform;
 
 	gl::QueryTimeSwappedRef  mQuery;
@@ -122,7 +125,7 @@ bool WindowsEnhancedVideoApp::playVideo( const fs::path &path )
 {
 	if( !path.empty() && fs::exists( path ) ) {
 		// TODO: make sure the movie can play
-		mMovieRef = video::MovieGl::create( path );
+		mMovieRef = MOVIE::create( path );
 		mMovieRef->play();
 
 		Area bounds = Area::proportionalFit( mMovieRef->getBounds(), getDisplay()->getBounds(), true, false );

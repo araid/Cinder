@@ -24,9 +24,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #if defined( CINDER_MSW )
 
-#include "cinder/evr/RendererImpl.h"
-#include "cinder/evr/MediaFoundationPlayer.h"
-#include "cinder/evr/DirectShowPlayer.h"
+#include "cinder/msw/video/RendererImpl.h"
+#include "cinder/msw/video/MediaFoundationPlayer.h"
+#include "cinder/msw/video/DirectShowPlayer.h"
 
 #pragma comment(lib, "mf.lib")
 #pragma comment(lib, "mfplat.lib")
@@ -195,6 +195,30 @@ void MovieSurface::init( const std::wstring& url )
 
 	assert( mHwnd != NULL );
 
+	// Create the renderer.
+	//enum { Try_EVR, Try_VMR9, Try_VMR7 };
+
+	//for( DWORD i = Try_EVR; i <= Try_VMR7; i++ ) {
+	SafeDelete( mRenderer );
+
+	//	switch( i ) {
+	//	case Try_EVR:
+	//		CI_LOG_V( "Trying EVR..." );
+	mRenderer = new ( std::nothrow ) RendererSampleGrabber();
+	//		break;
+
+	//	case Try_VMR9:
+	//		CI_LOG_V( "Trying VMR9..." );
+	//		mRenderer = new ( std::nothrow ) RendererVMR9();
+	//		break;
+
+	//	case Try_VMR7:
+	//		CI_LOG_V( "Trying VMR7..." );
+	//		mRenderer = new ( std::nothrow ) RendererVMR7();
+	//		break;
+	//	}
+
+	// Create the player.
 	for( int i = 0; i < BE_COUNT; ++i ) {
 		SafeRelease( mPlayer );
 
@@ -203,10 +227,13 @@ void MovieSurface::init( const std::wstring& url )
 			mPlayer = new MediaFoundationPlayer( hr, mHwnd );
 			mPlayer->AddRef();
 			if( SUCCEEDED( hr ) ) {
-				hr = mPlayer->OpenFile( url.c_str() );
+				hr = mPlayer->SetVideoRenderer( mRenderer );
 				if( SUCCEEDED( hr ) ) {
-					mCurrentBackend = (PlayerBackends) i;
-					break;
+					hr = mPlayer->OpenFile( url.c_str() );
+					if( SUCCEEDED( hr ) ) {
+						mCurrentBackend = (PlayerBackends) i;
+						break;
+					}
 				}
 			}
 		}
@@ -215,14 +242,22 @@ void MovieSurface::init( const std::wstring& url )
 			mPlayer = new DirectShowPlayer( hr, mHwnd );
 			mPlayer->AddRef();
 			if( SUCCEEDED( hr ) ) {
-				hr = mPlayer->OpenFile( url.c_str() );
+				hr = mPlayer->SetVideoRenderer( mRenderer );
 				if( SUCCEEDED( hr ) ) {
-					mCurrentBackend = (PlayerBackends) i;
-					break;
+					hr = mPlayer->OpenFile( url.c_str() );
+					if( SUCCEEDED( hr ) ) {
+						mCurrentBackend = (PlayerBackends) i;
+						break;
+					}
 				}
 			}
 		}
 	}
+
+	//	//
+	//	if( SUCCEEDED( hr ) )
+	//		break;
+	//}
 
 	if( FAILED( hr ) ) {
 		mCurrentBackend = BE_UNKNOWN;

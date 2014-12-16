@@ -27,9 +27,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "cinder/gl/gl.h" // included to avoid error C2120 when including "wgl_all.h"
 #include "glload/wgl_all.h"
 
-#include "cinder/evr/RendererGlImpl.h"
-#include "cinder/evr/MediaFoundationPlayer.h"
-#include "cinder/evr/DirectShowPlayer.h"
+#include "cinder/msw/video/RendererGlImpl.h"
+#include "cinder/msw/video/MediaFoundationPlayer.h"
+#include "cinder/msw/video/DirectShowPlayer.h"
 
 namespace cinder {
 namespace msw {
@@ -64,68 +64,68 @@ void MovieGl::init( const std::wstring& url )
 	assert( mHwnd != NULL );
 
 	// Create the renderer.
-	enum { Try_EVR, Try_VMR9, Try_VMR7 };
+	//	enum { Try_EVR, Try_VMR9, Try_VMR7 };
 
-	for( DWORD i = Try_EVR; i <= Try_VMR7; i++ ) {
-		SafeDelete( mRenderer );
+	//for( DWORD i = Try_EVR; i <= Try_VMR7; i++ ) {
+	SafeDelete( mRenderer );
 
-		switch( i ) {
-		case Try_EVR:
-			CI_LOG_V( "Trying EVR..." );
-			mRenderer = new ( std::nothrow ) RendererEVR();
-			break;
+	//	switch( i ) {
+	//	case Try_EVR:
+	//		CI_LOG_V( "Trying EVR..." );
+	mRenderer = new ( std::nothrow ) RendererEVR();
+	//		break;
 
-		case Try_VMR9:
-			CI_LOG_V( "Trying VMR9..." );
-			mRenderer = new ( std::nothrow ) RendererVMR9();
-			break;
+	//	case Try_VMR9:
+	//		CI_LOG_V( "Trying VMR9..." );
+	//		mRenderer = new ( std::nothrow ) RendererVMR9();
+	//		break;
 
-		case Try_VMR7:
-			CI_LOG_V( "Trying VMR7..." );
-			mRenderer = new ( std::nothrow ) RendererVMR7();
-			break;
-		}
+	//	case Try_VMR7:
+	//		CI_LOG_V( "Trying VMR7..." );
+	//		mRenderer = new ( std::nothrow ) RendererVMR7();
+	//		break;
+	//	}
 
-		// Create the player.
-		for( int i = 0; i < BE_COUNT; ++i ) {
-			SafeRelease( mPlayer );
+	// Create the player.
+	for( int i = 0; i < BE_COUNT; ++i ) {
+		SafeRelease( mPlayer );
 
-			if( i == BE_MEDIA_FOUNDATION ) {
-				// Try to play the movie using Media Foundation.
-				mPlayer = new MediaFoundationPlayer( hr, mHwnd );
-				mPlayer->AddRef();
+		if( i == BE_MEDIA_FOUNDATION ) {
+			// Try to play the movie using Media Foundation.
+			mPlayer = new MediaFoundationPlayer( hr, mHwnd );
+			mPlayer->AddRef();
+			if( SUCCEEDED( hr ) ) {
+				hr = mPlayer->SetVideoRenderer( mRenderer );
 				if( SUCCEEDED( hr ) ) {
-					hr = mPlayer->SetVideoRenderer( mRenderer );
+					hr = mPlayer->OpenFile( url.c_str() );
 					if( SUCCEEDED( hr ) ) {
-						hr = mPlayer->OpenFile( url.c_str() );
-						if( SUCCEEDED( hr ) ) {
-							mCurrentBackend = (PlayerBackends) i;
-							break;
-						}
-					}
-				}
-			}
-			else if( i == BE_DIRECTSHOW ) {
-				// Try to play the movie using DirectShow.
-				mPlayer = new DirectShowPlayer( hr, mHwnd );
-				mPlayer->AddRef();
-				if( SUCCEEDED( hr ) ) {
-					hr = mPlayer->SetVideoRenderer( mRenderer );
-					if( SUCCEEDED( hr ) ) {
-						hr = mPlayer->OpenFile( url.c_str() );
-						if( SUCCEEDED( hr ) ) {
-							mCurrentBackend = (PlayerBackends) i;
-							break;
-						}
+						mCurrentBackend = (PlayerBackends) i;
+						break;
 					}
 				}
 			}
 		}
-
-		//
-		if( SUCCEEDED( hr ) )
-			break;
+		else if( i == BE_DIRECTSHOW ) {
+			// Try to play the movie using DirectShow.
+			mPlayer = new DirectShowPlayer( hr, mHwnd );
+			mPlayer->AddRef();
+			if( SUCCEEDED( hr ) ) {
+				hr = mPlayer->SetVideoRenderer( mRenderer );
+				if( SUCCEEDED( hr ) ) {
+					hr = mPlayer->OpenFile( url.c_str() );
+					if( SUCCEEDED( hr ) ) {
+						mCurrentBackend = (PlayerBackends) i;
+						break;
+					}
+				}
+			}
+		}
 	}
+
+	//
+	//	if( SUCCEEDED( hr ) )
+	//		break;
+	//}
 
 	if( FAILED( hr ) ) {
 		mCurrentBackend = BE_UNKNOWN;

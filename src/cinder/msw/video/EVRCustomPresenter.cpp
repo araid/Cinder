@@ -1,6 +1,6 @@
 #define  MFV_LOCK_ONCE 1
 
-#include "cinder/evr/EVRCustomPresenter.h"
+#include "cinder/msw/video/EVRCustomPresenter.h"
 #include "cinder/Log.h"
 
 #if defined(CINDER_MSW)
@@ -766,7 +766,7 @@ HRESULT D3DPresentEngine::CreateD3DDevice()
 		hr = m_pDeviceManager->ResetDevice( pDevice, m_DeviceResetToken );
 		BREAK_ON_FAIL( hr );
 
-		CopyComPtr( m_pDevice, pDevice.get() );
+		m_pDevice = pDevice.Detach();
 	} while( false );
 
 	if( FAILED( hr ) )
@@ -799,8 +799,7 @@ HRESULT D3DPresentEngine::CreateD3DSample( IDirect3DSwapChain9 *pSwapChain, IMFS
 		BREAK_ON_FAIL( hr );
 
 		// Return the pointer to the caller.
-		*ppVideoSample = pSample;
-		( *ppVideoSample )->AddRef();
+		*ppVideoSample = pSample.Detach();
 	} while( false );
 
 	if( FAILED( hr ) )
@@ -2463,7 +2462,7 @@ HRESULT EVRCustomPresenter::DeliverFrameStepSample( IMFSample *pSample )
 			}
 
 			// Save this value.
-			m_FrameStep.pSampleNoRef = (DWORD_PTR) pUnk.get(); // No add-ref. 
+			m_FrameStep.pSampleNoRef = (DWORD_PTR) pUnk.Detach(); // No add-ref. 
 
 			// NOTE: We do not AddRef the IUnknown pointer, because that would prevent the 
 			// sample from invoking the OnSampleFree callback after the sample is presented. 

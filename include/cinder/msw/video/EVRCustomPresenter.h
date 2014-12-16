@@ -32,7 +32,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #if defined( CINDER_MSW )
 
-#include "cinder/evr/MediaFoundationFramework.h"
+#include "cinder/msw/video/MediaFoundationFramework.h"
 
 namespace cinder {
 namespace msw {

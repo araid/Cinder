@@ -1,5 +1,5 @@
-#include "cinder/evr/DirectShowPlayer.h"
-#include "cinder/evr/VideoRenderer.h"
+#include "cinder/msw/video/DirectShowPlayer.h"
+#include "cinder/msw/video/VideoRenderer.h"
 #include "cinder/Log.h"
 
 #if defined(CINDER_MSW)
@@ -338,6 +338,10 @@ void DirectShowPlayer::TearDownGraph()
 	// Stop sending event messages
 	if( m_pEvent ) {
 		m_pEvent->SetNotifyWindow( (OAHWND) NULL, NULL, NULL );
+	}
+
+	// Tear down renderer first.
+	if( m_pVideo ) {
 	}
 
 	SafeRelease( m_pGraph );

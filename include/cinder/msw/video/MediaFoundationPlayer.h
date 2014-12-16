@@ -6,9 +6,9 @@
 
 #include "cinder/msw/CinderMsw.h"
 #include "cinder/msw/CinderMswCom.h"
-#include "cinder/evr/VideoPlayer.h"
-#include "cinder/evr/VideoRenderer.h"
-#include "cinder/evr/EVRCustomPresenter.h"
+#include "cinder/msw/video/VideoPlayer.h"
+#include "cinder/msw/video/VideoRenderer.h"
+#include "cinder/msw/video/EVRCustomPresenter.h"
 
 namespace cinder {
 namespace msw {

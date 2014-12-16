@@ -29,7 +29,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "cinder/msw/CinderMsw.h"
 #include "cinder/msw/CinderMswCom.h"
-#include "cinder/evr/EVRCustomPresenter.h"
+#include "cinder/msw/video/EVRCustomPresenter.h"
+#include "cinder/msw/video/SampleGrabber.h"
 
 #include <dshow.h>
 #include <d3d9.h>
@@ -135,6 +136,34 @@ public:
 	bool UnlockSharedTexture( int textureID ) override { assert( m_pPresenter != NULL ); return m_pPresenter->UnlockSharedTexture( textureID ); }
 
 	EVRCustomPresenter* GetPresenter() { return m_pPresenter; }
+};
+
+
+// Manages the SampleGrabber filter.
+class RendererSampleGrabber : public VideoRenderer {
+	IBaseFilter*            m_pNullRenderer;
+	IBaseFilter*            m_pGrabberFilter;
+	ISampleGrabber*         m_pGrabber;
+	SampleGrabberCallback*  m_pCallBack;
+
+public:
+	RendererSampleGrabber();
+	~RendererSampleGrabber();
+	BOOL    HasVideo() const override;
+	HRESULT UpdateVideoWindow( HWND hwnd, const LPRECT prc ) override;
+	HRESULT Repaint( HWND hwnd, HDC hdc ) override;
+	HRESULT DisplayModeChanged() override;
+	HRESULT GetNativeVideoSize( LONG *lpWidth, LONG *lpHeight ) const override;
+	BOOL    CheckNewFrame() const override { return TRUE; }
+
+	HRESULT AddToGraph( IGraphBuilder *pGraph, HWND hwnd ) override;
+	HRESULT FinalizeGraph( IGraphBuilder *pGraph ) override;
+
+	bool CreateSharedTexture( int w, int h, int textureID ) override { throw std::runtime_error( "Not implemented" ); }
+	void ReleaseSharedTexture( int textureID ) override { throw std::runtime_error( "Not implemented" ); }
+	bool LockSharedTexture( int *pTextureID ) override { throw std::runtime_error( "Not implemented" ); }
+	bool UnlockSharedTexture( int textureID ) override { throw std::runtime_error( "Not implemented" ); }
+
 };
 
 HRESULT RemoveUnconnectedRenderer( IGraphBuilder *pGraph, IBaseFilter *pRenderer, BOOL *pbRemoved );

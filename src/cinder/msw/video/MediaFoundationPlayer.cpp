@@ -1,4 +1,4 @@
-#include "cinder/evr/MediaFoundationPlayer.h"
+#include "cinder/msw/video/MediaFoundationPlayer.h"
 
 #include "cinder/CinderAssert.h"
 #include "cinder/Log.h"
@@ -605,8 +605,7 @@ HRESULT MediaFoundationPlayer::CreatePlaybackTopology( IMFMediaSource *pSource, 
 		BREAK_ON_FAIL( hr );
 
 		// Return the IMFTopology pointer to the caller.
-		*ppTopology = pTopology;
-		( *ppTopology )->AddRef();
+		*ppTopology = pTopology.Detach();
 	} while( false );
 
 	return hr;
@@ -653,8 +652,7 @@ HRESULT MediaFoundationPlayer::CreateMediaSinkActivate( IMFStreamDescriptor *pSo
 			BREAK_ON_FAIL( hr );
 
 			// Return IMFMediaSink pointer to caller.
-			*ppMediaSink = pSink;
-			( *ppMediaSink )->AddRef();
+			*ppMediaSink = pSink.Detach();
 		}
 		else {
 			// Unknown stream type.
@@ -692,8 +690,7 @@ HRESULT MediaFoundationPlayer::AddSourceNode( IMFTopology *pTopology, IMFMediaSo
 		BREAK_ON_FAIL( hr );
 
 		// Return the pointer to the caller.
-		*ppNode = pNode;
-		( *ppNode )->AddRef();
+		*ppNode = pNode.Detach();
 	} while( false );
 
 	return hr;
@@ -721,8 +718,7 @@ HRESULT MediaFoundationPlayer::AddOutputNode( IMFTopology *pTopology, IMFStreamS
 		BREAK_ON_FAIL( hr );
 
 		// Return the pointer to the caller.
-		*ppNode = pNode;
-		( *ppNode )->AddRef();
+		*ppNode = pNode.Detach();
 	} while( false );
 
 	return hr;
@@ -756,8 +752,7 @@ HRESULT MediaFoundationPlayer::AddOutputNode( IMFTopology *pTopology, IMFActivat
 		BREAK_ON_FAIL( hr );
 
 		// Return the pointer to the caller.
-		*ppNode = pNode;
-		( *ppNode )->AddRef();
+		*ppNode = pNode.Detach();
 	} while( false );
 
 	return hr;

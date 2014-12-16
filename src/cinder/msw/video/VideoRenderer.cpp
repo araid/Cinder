@@ -5,8 +5,8 @@
 //
 // Copyright (c) Microsoft Corporation. All rights reserved.
 
-#include "cinder/evr/VideoRenderer.h"
-#include "cinder/evr/EVRCustomPresenter.h"
+#include "cinder/msw/video/VideoRenderer.h"
+#include "cinder/msw/video/EVRCustomPresenter.h"
 #include "cinder/Log.h"
 
 #if defined(CINDER_MSW)
@@ -19,7 +19,7 @@ namespace video {
 
 /// VMR-7 Wrapper
 
-RendererVMR7::RendererVMR7() 
+RendererVMR7::RendererVMR7()
 	: m_pWindowless( NULL )
 {
 
@@ -158,8 +158,7 @@ HRESULT InitWindowlessVMR(
 		BREAK_ON_FAIL( hr );
 
 		// Return the IVMRWindowlessControl pointer to the caller.
-		*ppWC = pWC;
-		( *ppWC )->AddRef();
+		*ppWC = pWC.Detach();
 	} while( false );
 
 	return hr;
@@ -309,8 +308,7 @@ HRESULT InitWindowlessVMR9(
 		BREAK_ON_FAIL( hr );
 
 		// Return the IVMRWindowlessControl pointer to the caller.
-		*ppWC = pWC;
-		( *ppWC )->AddRef();
+		*ppWC = pWC.Detach();
 	} while( false );
 
 	return hr;
@@ -364,11 +362,7 @@ HRESULT RendererEVR::AddToGraph( IGraphBuilder *pGraph, HWND hwnd )
 		hr = InitializeEVR( pEVR, hwnd, m_pPresenter, &m_pVideoDisplay );
 		BREAK_ON_FAIL( hr );
 
-		m_pEVR = pEVR;
-
-		// We have to add an extra reference to prevent the Graph from destroying our filter.
-		m_pEVR->AddRef();
-		m_pEVR->AddRef();
+		m_pEVR = pEVR.Detach();
 	} while( false );
 
 	if( FAILED( hr ) ) {
@@ -450,6 +444,149 @@ HRESULT RendererEVR::GetNativeVideoSize( LONG *lpWidth, LONG *lpHeight ) const
 	}
 }
 
+
+/// RendererSampleGrabber
+
+RendererSampleGrabber::RendererSampleGrabber()
+	: m_pGrabberFilter( NULL ), m_pGrabber( NULL )
+{
+	m_pCallBack = new SampleGrabberCallback();
+	m_pCallBack->newFrame = false;
+}
+
+RendererSampleGrabber::~RendererSampleGrabber()
+{
+	SafeRelease( m_pNullRenderer );
+	SafeRelease( m_pGrabber );
+	SafeRelease( m_pGrabberFilter );
+
+	SafeRelease( m_pCallBack );
+}
+
+BOOL RendererSampleGrabber::HasVideo() const
+{
+	return ( m_pGrabber != NULL );
+}
+
+HRESULT RendererSampleGrabber::AddToGraph( IGraphBuilder *pGraph, HWND hwnd )
+{
+	HRESULT hr = S_OK;
+
+	do {
+		ScopedComPtr<IBaseFilter> pGrabberFilter;
+		hr = AddFilterByCLSID( pGraph, CLSID_SampleGrabber,
+							   &pGrabberFilter, L"SampleGrabber" );
+		BREAK_ON_FAIL( hr );
+
+		m_pGrabberFilter = pGrabberFilter.Detach();
+
+		ScopedComPtr<ISampleGrabber> pGrabber;
+		hr = m_pGrabberFilter->QueryInterface( IID_ISampleGrabber, (void**) &pGrabber );
+		BREAK_ON_FAIL( hr );
+
+		m_pGrabber = pGrabber.Detach();
+
+		hr = m_pGrabber->SetOneShot( FALSE );
+		hr = m_pGrabber->SetBufferSamples( TRUE );
+
+		hr = m_pGrabber->SetCallback( m_pCallBack, 0 );
+		BREAK_ON_FAIL( hr );
+
+		// Set media type.
+		AM_MEDIA_TYPE mt;
+		ZeroMemory( &mt, sizeof( AM_MEDIA_TYPE ) );
+
+		mt.majortype = MEDIATYPE_Video;
+		mt.subtype = MEDIASUBTYPE_RGB24;
+		mt.formattype = FORMAT_VideoInfo;
+
+		hr = m_pGrabber->SetMediaType( &mt );
+		BREAK_ON_FAIL( hr );
+
+		// Add null renderer
+		ScopedComPtr<IBaseFilter> pNullRenderer;
+		hr = AddFilterByCLSID( pGraph, CLSID_NullRenderer,
+							   &pNullRenderer, L"NullRenderer" );
+		BREAK_ON_FAIL( hr );
+
+		m_pNullRenderer = pNullRenderer.Detach();
+	} while( false );
+
+	if( FAILED( hr ) ) {
+		SafeRelease( m_pNullRenderer );
+		SafeRelease( m_pGrabber );
+		SafeRelease( m_pGrabberFilter );
+	}
+
+	return hr;
+}
+
+HRESULT RendererSampleGrabber::FinalizeGraph( IGraphBuilder *pGraph )
+{
+	if( m_pGrabber == NULL ) {
+		return S_OK;
+	}
+
+	BOOL bRemoved;
+	HRESULT hr = RemoveUnconnectedRenderer( pGraph, m_pNullRenderer, &bRemoved );
+	if( bRemoved ) {
+		SafeRelease( m_pNullRenderer );
+	}
+
+	hr = RemoveUnconnectedRenderer( pGraph, m_pGrabberFilter, &bRemoved );
+	if( bRemoved ) {
+		SafeRelease( m_pGrabber );
+		SafeRelease( m_pGrabberFilter );
+	}
+
+	return hr;
+}
+
+HRESULT RendererSampleGrabber::UpdateVideoWindow( HWND hwnd, const LPRECT prc )
+{
+	return S_OK;
+}
+
+HRESULT RendererSampleGrabber::Repaint( HWND hwnd, HDC hdc )
+{
+	return S_OK;
+}
+
+HRESULT RendererSampleGrabber::DisplayModeChanged()
+{
+	return S_OK;
+}
+
+HRESULT RendererSampleGrabber::GetNativeVideoSize( LONG *lpWidth, LONG *lpHeight ) const
+{
+	assert( lpWidth != nullptr );
+	assert( lpHeight != nullptr );
+
+	HRESULT hr = S_OK;
+
+	do {
+		BREAK_ON_NULL( m_pGrabber, E_POINTER );
+
+		AM_MEDIA_TYPE mediaType;
+		hr = m_pGrabber->GetConnectedMediaType( &mediaType );
+		BREAK_ON_FAIL( hr );
+
+		if( mediaType.formattype == FORMAT_VideoInfo ) {
+			if( mediaType.cbFormat >= sizeof( VIDEOINFOHEADER ) ) {
+				VIDEOINFOHEADER *pHeader = reinterpret_cast<VIDEOINFOHEADER*>( mediaType.pbFormat );
+				*lpWidth = pHeader->bmiHeader.biWidth;
+				*lpHeight = pHeader->bmiHeader.biHeight;
+				break;
+			}
+		}
+
+		hr = E_FAIL;
+	} while( false );
+
+	return hr;
+}
+
+
 // Initialize the EVR filter. 
 
 HRESULT InitializeEVR(
@@ -488,8 +625,7 @@ HRESULT InitializeEVR(
 		}
 
 		// Return the IMFVideoDisplayControl pointer to the caller.
-		*ppDisplayControl = pDisplay;
-		( *ppDisplayControl )->AddRef();
+		*ppDisplayControl = pDisplay.Detach();
 	} while( false );
 
 	return hr;
@@ -571,7 +707,7 @@ HRESULT FindConnectedPin( IBaseFilter *pFilter, PIN_DIRECTION PinDir,
 			break;
 		}
 		if( bFound ) {
-			*ppPin = pPin;
+			*ppPin = pPin.Detach();
 			break;
 		}
 
@@ -605,8 +741,7 @@ HRESULT AddFilterByCLSID( IGraphBuilder *pGraph, REFGUID clsid,
 		std::wstring wstr( wszName );
 		CI_LOG_V( "Added filter: " << toUtf8String( wstr ).c_str() );
 
-		*ppF = pFilter;
-		( *ppF )->AddRef();
+		*ppF = pFilter.Detach();
 	} while( false );
 
 	return hr;
