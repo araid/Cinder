@@ -13,7 +13,7 @@
 
 #include "LightProfile.h"
 
-#define ROOM_SIZE 50
+#define ROOM_SIZE 25
 
 using namespace ci;
 using namespace ci::app;
@@ -292,9 +292,9 @@ void LightsApp::update()
 		wedge->setLengthAndAxis( vec3( y - 5, 9, 15 ), vec3( y + 5, 9, 15 ) );
 		wedge->pointAt( vec3( x, 5.0f + y, z ) );
 
-		x = 5.0f * cosf( t );
-		y = 5.0f + 4.0f * cosf( t );
-		z = 5.0f * sinf( t );
+		x = 20.0f * cosf( t );
+		y = 10.0f + 9.0f * cosf( t );
+		z = 20.0f * sinf( t );
 		point->setPosition( vec3( x, y, z ) );
 
 		x = 5.0f * math<float>::cos( t );
