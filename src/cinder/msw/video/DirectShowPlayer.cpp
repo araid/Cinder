@@ -356,39 +356,39 @@ void DirectShowPlayer::TearDownGraph()
 /*
 HRESULT DirectShowPlayer::CreateVideoRenderer()
 {
-	HRESULT hr = E_FAIL;
+HRESULT hr = E_FAIL;
 
-	enum { Try_EVR, Try_VMR9, Try_VMR7 };
+enum { Try_EVR, Try_VMR9, Try_VMR7 };
 
-	for( DWORD i = Try_EVR; i <= Try_VMR7; i++ ) {
-		switch( i ) {
-		case Try_EVR:
-			CI_LOG_V( "Trying EVR..." );
-			m_pVideo = new ( std::nothrow ) RendererEVR();
-			break;
+for( DWORD i = Try_EVR; i <= Try_VMR7; i++ ) {
+switch( i ) {
+case Try_EVR:
+CI_LOG_V( "Trying EVR..." );
+m_pVideo = new ( std::nothrow ) RendererEVR();
+break;
 
-		case Try_VMR9:
-			CI_LOG_V( "Trying VMR9..." );
-			m_pVideo = new ( std::nothrow ) RendererVMR9();
-			break;
+case Try_VMR9:
+CI_LOG_V( "Trying VMR9..." );
+m_pVideo = new ( std::nothrow ) RendererVMR9();
+break;
 
-		case Try_VMR7:
-			CI_LOG_V( "Trying VMR7..." );
-			m_pVideo = new ( std::nothrow ) RendererVMR7();
-			break;
-		}
+case Try_VMR7:
+CI_LOG_V( "Trying VMR7..." );
+m_pVideo = new ( std::nothrow ) RendererVMR7();
+break;
+}
 
-		BREAK_ON_NULL( m_pVideo, E_OUTOFMEMORY );
+BREAK_ON_NULL( m_pVideo, E_OUTOFMEMORY );
 
-		hr = m_pVideo->AddToGraph( m_pGraph, m_hwnd );
-		if( SUCCEEDED( hr ) ) {
-			CI_LOG_V( "Success!" );
-			break;
-		}
+hr = m_pVideo->AddToGraph( m_pGraph, m_hwnd );
+if( SUCCEEDED( hr ) ) {
+CI_LOG_V( "Success!" );
+break;
+}
 
-		SafeDelete( m_pVideo );
-	}
-	return hr;
+SafeDelete( m_pVideo );
+}
+return hr;
 }
 */
 
@@ -424,11 +424,16 @@ HRESULT DirectShowPlayer::RenderStreams( IBaseFilter *pSource )
 		// Loop through all the pins
 		IPin *pPin;
 		while( S_OK == pEnum->Next( 1, &pPin, NULL ) ) {
-			// Try to render this pin. 
-			// It's OK if we fail some pins, if at least one pin renders.
-			HRESULT hr2 = pGraph2->RenderEx( pPin, AM_RENDEREX_RENDERTOEXISTINGRENDERERS, NULL );
+			// Try to connect this pin. It's OK if we fail.
+			HRESULT hr2 = m_pVideo->ConnectFilters( pGraph2, pPin );
+
+			// Try to render this pin.
+			if( FAILED( hr2 ) )
+				hr2 = pGraph2->RenderEx( pPin, AM_RENDEREX_RENDERTOEXISTINGRENDERERS, NULL );
 
 			pPin->Release();
+
+			// It's OK if we fail some pins, if at least one pin renders.
 			if( SUCCEEDED( hr2 ) ) {
 				bRenderedAnyPin = TRUE;
 			}

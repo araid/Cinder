@@ -456,7 +456,7 @@ RendererSampleGrabber::RendererSampleGrabber()
 
 RendererSampleGrabber::~RendererSampleGrabber()
 {
-	SafeRelease( m_pNullRenderer );
+	//SafeRelease( m_pNullRenderer );
 	SafeRelease( m_pGrabber );
 	SafeRelease( m_pGrabberFilter );
 
@@ -478,18 +478,8 @@ HRESULT RendererSampleGrabber::AddToGraph( IGraphBuilder *pGraph, HWND hwnd )
 							   &pGrabberFilter, L"SampleGrabber" );
 		BREAK_ON_FAIL( hr );
 
-		m_pGrabberFilter = pGrabberFilter.Detach();
-
 		ScopedComPtr<ISampleGrabber> pGrabber;
-		hr = m_pGrabberFilter->QueryInterface( IID_ISampleGrabber, (void**) &pGrabber );
-		BREAK_ON_FAIL( hr );
-
-		m_pGrabber = pGrabber.Detach();
-
-		hr = m_pGrabber->SetOneShot( FALSE );
-		hr = m_pGrabber->SetBufferSamples( TRUE );
-
-		hr = m_pGrabber->SetCallback( m_pCallBack, 0 );
+		hr = pGrabberFilter.QueryInterface( IID_ISampleGrabber, (void**) &pGrabber );
 		BREAK_ON_FAIL( hr );
 
 		// Set media type.
@@ -500,7 +490,14 @@ HRESULT RendererSampleGrabber::AddToGraph( IGraphBuilder *pGraph, HWND hwnd )
 		mt.subtype = MEDIASUBTYPE_RGB24;
 		mt.formattype = FORMAT_VideoInfo;
 
-		hr = m_pGrabber->SetMediaType( &mt );
+		hr = pGrabber->SetMediaType( &mt );
+		BREAK_ON_FAIL( hr );
+
+		// Setup the grabber.
+		hr = pGrabber->SetOneShot( FALSE );
+		hr = pGrabber->SetBufferSamples( TRUE );
+
+		hr = pGrabber->SetCallback( m_pCallBack, 0 );
 		BREAK_ON_FAIL( hr );
 
 		// Add null renderer
@@ -509,14 +506,10 @@ HRESULT RendererSampleGrabber::AddToGraph( IGraphBuilder *pGraph, HWND hwnd )
 							   &pNullRenderer, L"NullRenderer" );
 		BREAK_ON_FAIL( hr );
 
-		m_pNullRenderer = pNullRenderer.Detach();
+		// If everything worked out, we're ready to take ownership of the pointers.
+		m_pGrabberFilter = pGrabberFilter.Detach();
+		m_pGrabber = pGrabber.Detach();
 	} while( false );
-
-	if( FAILED( hr ) ) {
-		SafeRelease( m_pNullRenderer );
-		SafeRelease( m_pGrabber );
-		SafeRelease( m_pGrabberFilter );
-	}
 
 	return hr;
 }
@@ -528,18 +521,26 @@ HRESULT RendererSampleGrabber::FinalizeGraph( IGraphBuilder *pGraph )
 	}
 
 	BOOL bRemoved;
-	HRESULT hr = RemoveUnconnectedRenderer( pGraph, m_pNullRenderer, &bRemoved );
-	if( bRemoved ) {
-		SafeRelease( m_pNullRenderer );
-	}
+	//HRESULT hr = RemoveUnconnectedRenderer( pGraph, m_pNullRenderer, &bRemoved );
+	//if( bRemoved ) {
+	//	SafeRelease( m_pNullRenderer );
+	//}
 
-	hr = RemoveUnconnectedRenderer( pGraph, m_pGrabberFilter, &bRemoved );
+	HRESULT hr = RemoveUnconnectedRenderer( pGraph, m_pGrabberFilter, &bRemoved );
 	if( bRemoved ) {
 		SafeRelease( m_pGrabber );
 		SafeRelease( m_pGrabberFilter );
 	}
 
 	return hr;
+}
+
+HRESULT RendererSampleGrabber::ConnectFilters( IGraphBuilder *pGraph, IPin *pPin )
+{
+	if( m_pGrabberFilter == NULL )
+		return E_POINTER;
+
+	return video::ConnectFilters( pGraph, pPin, m_pGrabberFilter );
 }
 
 HRESULT RendererSampleGrabber::UpdateVideoWindow( HWND hwnd, const LPRECT prc )
@@ -680,40 +681,74 @@ HRESULT IsPinDirection( IPin *pPin, PIN_DIRECTION dir, BOOL *pResult )
 	return hr;
 }
 
+HRESULT FindUnconnectedPin( IBaseFilter *pFilter, PIN_DIRECTION PinDir, IPin **ppPin )
+{
+	HRESULT hr = S_OK;
+	BOOL bFound = FALSE;
+
+	do {
+		ScopedComPtr<IEnumPins> pEnum;
+		ScopedComPtr<IPin> pPin;
+
+		hr = pFilter->EnumPins( &pEnum );
+		BREAK_ON_FAIL( hr );
+
+		while( S_OK == pEnum->Next( 1, &pPin, NULL ) ) {
+			hr = MatchPin( pPin, PinDir, FALSE, &bFound );
+			BREAK_ON_FAIL( hr );
+
+			if( bFound ) {
+				*ppPin = pPin.Detach();
+				break;
+			}
+
+			// Re-use pPin on next iteration.
+			pPin.Release();
+		}
+	} while( false );
+
+	if( !bFound ) {
+		hr = VFW_E_NOT_FOUND;
+	}
+
+	return hr;
+}
+
 HRESULT FindConnectedPin( IBaseFilter *pFilter, PIN_DIRECTION PinDir,
 						  IPin **ppPin )
 {
+	HRESULT hr = S_OK;
+	BOOL bFound = FALSE;
+
 	*ppPin = NULL;
 
-	ScopedComPtr<IEnumPins> pEnum;
-	ScopedComPtr<IPin> pPin;
+	do {
+		ScopedComPtr<IEnumPins> pEnum;
+		ScopedComPtr<IPin> pPin;
 
-	HRESULT hr = pFilter->EnumPins( &pEnum );
-	if( FAILED( hr ) ) {
-		return hr;
-	}
+		hr = pFilter->EnumPins( &pEnum );
+		BREAK_ON_FAIL( hr );
 
-	BOOL bFound = FALSE;
-	while( S_OK == pEnum->Next( 1, &pPin, NULL ) ) {
-		BOOL bIsConnected;
-		hr = IsPinConnected( pPin, &bIsConnected );
-		if( SUCCEEDED( hr ) ) {
-			if( bIsConnected ) {
-				hr = IsPinDirection( pPin, PinDir, &bFound );
+		while( S_OK == pEnum->Next( 1, &pPin, NULL ) ) {
+			BOOL bIsConnected;
+			hr = IsPinConnected( pPin, &bIsConnected );
+			if( SUCCEEDED( hr ) ) {
+				if( bIsConnected ) {
+					hr = IsPinDirection( pPin, PinDir, &bFound );
+				}
 			}
-		}
 
-		if( FAILED( hr ) ) {
-			break;
-		}
-		if( bFound ) {
-			*ppPin = pPin.Detach();
-			break;
-		}
+			BREAK_ON_FAIL( hr );
 
-		// Re-use pPin on next iteration.
-		pPin.Release();
-	}
+			if( bFound ) {
+				*ppPin = pPin.Detach();
+				break;
+			}
+
+			// Re-use pPin on next iteration.
+			pPin.Release();
+		}
+	} while( false );
 
 	if( !bFound ) {
 		hr = VFW_E_NOT_FOUND;
@@ -743,6 +778,71 @@ HRESULT AddFilterByCLSID( IGraphBuilder *pGraph, REFGUID clsid,
 
 		*ppF = pFilter.Detach();
 	} while( false );
+
+	return hr;
+}
+
+HRESULT MatchPin( IPin *pPin, PIN_DIRECTION direction, BOOL bShouldBeConnected, BOOL *pResult )
+{
+	assert( pResult != NULL );
+
+	BOOL bMatch = FALSE;
+	BOOL bIsConnected = FALSE;
+
+	HRESULT hr = IsPinConnected( pPin, &bIsConnected );
+	if( SUCCEEDED( hr ) ) {
+		if( bIsConnected == bShouldBeConnected ) {
+			hr = IsPinDirection( pPin, direction, &bMatch );
+		}
+	}
+
+	if( SUCCEEDED( hr ) ) {
+		*pResult = bMatch;
+	}
+
+	return hr;
+}
+
+HRESULT ConnectFilters( IGraphBuilder *pGraph, IPin *pOut, IBaseFilter *pDest )
+{
+	IPin *pIn = NULL;
+
+	// Find an input pin on the downstream filter.
+	HRESULT hr = FindUnconnectedPin( pDest, PINDIR_INPUT, &pIn );
+	if( SUCCEEDED( hr ) ) {
+		// Try to connect them.
+		hr = pGraph->Connect( pOut, pIn );
+		pIn->Release();
+	}
+
+	return hr;
+}
+
+HRESULT ConnectFilters( IGraphBuilder *pGraph, IBaseFilter *pSrc, IPin *pIn )
+{
+	IPin *pOut = NULL;
+
+	// Find an output pin on the upstream filter.
+	HRESULT hr = FindUnconnectedPin( pSrc, PINDIR_OUTPUT, &pOut );
+	if( SUCCEEDED( hr ) ) {
+		// Try to connect them.
+		hr = pGraph->Connect( pOut, pIn );
+		pOut->Release();
+	}
+
+	return hr;
+}
+
+HRESULT ConnectFilters( IGraphBuilder *pGraph, IBaseFilter *pSrc, IBaseFilter *pDest )
+{
+	IPin *pOut = NULL;
+
+	// Find an output pin on the first filter.
+	HRESULT hr = FindUnconnectedPin( pSrc, PINDIR_OUTPUT, &pOut );
+	if( SUCCEEDED( hr ) ) {
+		hr = ConnectFilters( pGraph, pOut, pDest );
+		pOut->Release();
+	}
 
 	return hr;
 }

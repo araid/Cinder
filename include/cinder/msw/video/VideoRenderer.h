@@ -56,6 +56,7 @@ public:
 	// DirectShow support.
 	virtual HRESULT AddToGraph( IGraphBuilder *pGraph, HWND hwnd ) = 0;
 	virtual HRESULT FinalizeGraph( IGraphBuilder *pGraph ) = 0;
+	virtual HRESULT ConnectFilters( IGraphBuilder *pGraph, IPin *pPin ) = 0;
 
 	virtual bool CreateSharedTexture( int w, int h, int textureID ) = 0;
 	virtual void ReleaseSharedTexture( int textureID ) = 0;
@@ -79,6 +80,7 @@ public:
 
 	HRESULT AddToGraph( IGraphBuilder *pGraph, HWND hwnd ) override;
 	HRESULT FinalizeGraph( IGraphBuilder *pGraph ) override;
+	HRESULT ConnectFilters( IGraphBuilder *pGraph, IPin *pPin ) override { return E_NOTIMPL; }
 
 	bool CreateSharedTexture( int w, int h, int textureID ) override { throw std::runtime_error( "Not implemented" ); }
 	void ReleaseSharedTexture( int textureID ) override { throw std::runtime_error( "Not implemented" ); }
@@ -103,6 +105,7 @@ public:
 
 	HRESULT AddToGraph( IGraphBuilder *pGraph, HWND hwnd ) override;
 	HRESULT FinalizeGraph( IGraphBuilder *pGraph ) override;
+	HRESULT ConnectFilters( IGraphBuilder *pGraph, IPin *pPin ) override { return E_NOTIMPL; }
 
 	bool CreateSharedTexture( int w, int h, int textureID ) override { throw std::runtime_error( "Not implemented" ); }
 	void ReleaseSharedTexture( int textureID ) override { throw std::runtime_error( "Not implemented" ); }
@@ -129,6 +132,7 @@ public:
 
 	HRESULT AddToGraph( IGraphBuilder *pGraph, HWND hwnd ) override;
 	HRESULT FinalizeGraph( IGraphBuilder *pGraph ) override;
+	HRESULT ConnectFilters( IGraphBuilder *pGraph, IPin *pPin ) override { return E_NOTIMPL; }
 
 	bool CreateSharedTexture( int w, int h, int textureID ) override { assert( m_pPresenter != NULL ); return m_pPresenter->CreateSharedTexture( w, h, textureID ); }
 	void ReleaseSharedTexture( int textureID ) override { assert( m_pPresenter != NULL ); m_pPresenter->ReleaseSharedTexture( textureID ); }
@@ -141,7 +145,7 @@ public:
 
 // Manages the SampleGrabber filter.
 class RendererSampleGrabber : public VideoRenderer {
-	IBaseFilter*            m_pNullRenderer;
+	//IBaseFilter*            m_pNullRenderer;
 	IBaseFilter*            m_pGrabberFilter;
 	ISampleGrabber*         m_pGrabber;
 	SampleGrabberCallback*  m_pCallBack;
@@ -158,6 +162,7 @@ public:
 
 	HRESULT AddToGraph( IGraphBuilder *pGraph, HWND hwnd ) override;
 	HRESULT FinalizeGraph( IGraphBuilder *pGraph ) override;
+	HRESULT ConnectFilters( IGraphBuilder *pGraph, IPin *pPin ) override;
 
 	bool CreateSharedTexture( int w, int h, int textureID ) override { throw std::runtime_error( "Not implemented" ); }
 	void ReleaseSharedTexture( int textureID ) override { throw std::runtime_error( "Not implemented" ); }
@@ -171,9 +176,14 @@ HRESULT AddFilterByCLSID( IGraphBuilder *pGraph, REFGUID clsid, IBaseFilter **pp
 HRESULT InitializeEVR( IBaseFilter *pEVR, HWND hwnd, IMFVideoPresenter *pPresenter, IMFVideoDisplayControl **ppWc );
 HRESULT InitWindowlessVMR9( IBaseFilter *pVMR, HWND hwnd, IVMRWindowlessControl9 **ppWc );
 HRESULT InitWindowlessVMR( IBaseFilter *pVMR, HWND hwnd, IVMRWindowlessControl **ppWc );
+HRESULT FindUnconnectedPin( IBaseFilter *pFilter, PIN_DIRECTION PinDir, IPin **ppPin );
 HRESULT FindConnectedPin( IBaseFilter *pFilter, PIN_DIRECTION PinDir, IPin **ppPin );
 HRESULT IsPinConnected( IPin *pPin, BOOL *pResult );
 HRESULT IsPinDirection( IPin *pPin, PIN_DIRECTION dir, BOOL *pResult );
+HRESULT MatchPin( IPin *pPin, PIN_DIRECTION direction, BOOL bShouldBeConnected, BOOL *pResult );
+HRESULT ConnectFilters( IGraphBuilder *pGraph, IPin *pOut, IBaseFilter *pDest );
+HRESULT ConnectFilters( IGraphBuilder *pGraph, IBaseFilter *pSrc, IPin *pIn );
+HRESULT ConnectFilters( IGraphBuilder *pGraph, IBaseFilter *pSrc, IBaseFilter *pDest );
 
 } // namespace video
 } // namespace msw
