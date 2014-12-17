@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cinder/Cinder.h"
+#include "cinder/Log.h"
 
 #if defined( CINDER_MSW )
 
@@ -125,6 +126,8 @@ public:
 	{
 		if( WaitForSingleObject( hEvent, 0 ) == WAIT_OBJECT_0 ) return S_OK;
 
+		CI_LOG_V( "New sample arrived" );
+
 		HRESULT hr = pSample->GetPointer( &ptrBuffer );
 
 		if( hr == S_OK ) {
@@ -138,7 +141,7 @@ public:
 				SetEvent( hEvent );
 			}
 			else {
-				printf( "ERROR: SampleCB() - buffer sizes do not match\n" );
+				CI_LOG_E( "Buffer sizes do not match" );
 			}
 		}
 

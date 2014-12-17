@@ -497,7 +497,7 @@ HRESULT RendererSampleGrabber::AddToGraph( IGraphBuilder *pGraph, HWND hwnd )
 		hr = pGrabber->SetOneShot( FALSE );
 		hr = pGrabber->SetBufferSamples( TRUE );
 
-		hr = pGrabber->SetCallback( m_pCallBack, 0 );
+		//hr = pGrabber->SetCallback( m_pCallBack, 0 );
 		BREAK_ON_FAIL( hr );
 
 		// Add null renderer
@@ -566,6 +566,7 @@ HRESULT RendererSampleGrabber::GetNativeVideoSize( LONG *lpWidth, LONG *lpHeight
 	HRESULT hr = S_OK;
 
 	do {
+		BREAK_ON_NULL( m_pCallBack, E_POINTER );
 		BREAK_ON_NULL( m_pGrabber, E_POINTER );
 
 		AM_MEDIA_TYPE mediaType;
@@ -577,6 +578,10 @@ HRESULT RendererSampleGrabber::GetNativeVideoSize( LONG *lpWidth, LONG *lpHeight
 				VIDEOINFOHEADER *pHeader = reinterpret_cast<VIDEOINFOHEADER*>( mediaType.pbFormat );
 				*lpWidth = pHeader->bmiHeader.biWidth;
 				*lpHeight = pHeader->bmiHeader.biHeight;
+
+				// Use this opportunity to setup the grabber buffer.
+				int numBytesIn = *lpWidth * *lpHeight * 3; // RGB
+				m_pCallBack->setupBuffer( numBytesIn );
 				break;
 			}
 		}
