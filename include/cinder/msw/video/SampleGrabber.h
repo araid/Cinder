@@ -65,43 +65,51 @@ public:
 
 	//------------------------------------------------
 	SampleGrabberCallback()
+		: mBuffer( NULL ), mBufferSize( 0 ), mFreezeCheck( 0 ), mNewFrame( false ), mLocked( false )
 	{
-		InitializeCriticalSection( &critSection );
-		freezeCheck = 0;
-
-
-		bufferSetup = false;
-		newFrame = false;
-		latestBufferLength = 0;
-
-		hEvent = CreateEvent( NULL, true, false, NULL );
+		InitializeCriticalSection( &mLock );
+		mEvent = CreateEvent( NULL, true, false, NULL );
 	}
 
 
 	//------------------------------------------------
 	~SampleGrabberCallback()
 	{
-		ptrBuffer = NULL;
-		DeleteCriticalSection( &critSection );
-		CloseHandle( hEvent );
-		if( bufferSetup ) {
-			delete pixels;
+		if( mLocked ) {
+			CI_LOG_E( "Pixels are still locked. Call UnlockPixels() prior to destructing the Sample Grabber callback!" );
+			UnlockPixels();
 		}
+
+		CloseHandle( mEvent );
+		DeleteCriticalSection( &mLock );
+
+		if( mBuffer ) {
+			delete[] mBuffer;
+			mBuffer = NULL;
+		}
+	}
+
+	BOOL HasNewFrame() { return mNewFrame; }
+
+	ULONG FreezeCheck()
+	{
+		return InterlockedIncrement( &mFreezeCheck );
 	}
 
 
 	//------------------------------------------------
-	bool setupBuffer( int numBytesIn )
+	bool SetupBuffer( int width, int height, int bytesPerPixel )
 	{
-		if( bufferSetup ) {
+		if( mBuffer ) {
 			return false;
 		}
 		else {
-			numBytes = numBytesIn;
-			pixels = new unsigned char[numBytes];
-			bufferSetup = true;
-			newFrame = false;
-			latestBufferLength = 0;
+			mWidth = width;
+			mHeight = height;
+			mBufferSize = width * height * bytesPerPixel;
+			mBuffer = new unsigned char[mBufferSize];
+
+			mNewFrame = false;
 		}
 		return true;
 	}
@@ -124,21 +132,20 @@ public:
 	//------------------------------------------------
 	STDMETHODIMP SampleCB( double Time, IMediaSample *pSample )
 	{
-		if( WaitForSingleObject( hEvent, 0 ) == WAIT_OBJECT_0 ) return S_OK;
+		if( WaitForSingleObject( mEvent, 0 ) == WAIT_OBJECT_0 ) return S_OK;
 
-		CI_LOG_V( "New sample arrived" );
-
+		unsigned char *ptrBuffer = nullptr;
 		HRESULT hr = pSample->GetPointer( &ptrBuffer );
 
 		if( hr == S_OK ) {
-			latestBufferLength = pSample->GetActualDataLength();
-			if( latestBufferLength == numBytes ) {
-				EnterCriticalSection( &critSection );
-				memcpy( pixels, ptrBuffer, latestBufferLength );
-				newFrame = true;
-				freezeCheck = 1;
-				LeaveCriticalSection( &critSection );
-				SetEvent( hEvent );
+			long bytes = pSample->GetActualDataLength();
+			if( bytes == mBufferSize ) {
+				EnterCriticalSection( &mLock );
+				memcpy( mBuffer, ptrBuffer, bytes );
+				mNewFrame = true;
+				mFreezeCheck = 1;
+				LeaveCriticalSection( &mLock );
+				SetEvent( mEvent );
 			}
 			else {
 				CI_LOG_E( "Buffer sizes do not match" );
@@ -155,16 +162,86 @@ public:
 		return E_NOTIMPL;
 	}
 
-	int freezeCheck;
+	BOOL LockPixels( unsigned char *pDest )
+	{
+		DWORD result = WaitForSingleObject( mEvent, 1000 );
+		if( result != WAIT_OBJECT_0 ) return FALSE;
 
-	int latestBufferLength;
-	int numBytes;
-	bool newFrame;
-	bool bufferSetup;
-	unsigned char * pixels;
-	unsigned char * ptrBuffer;
-	CRITICAL_SECTION critSection;
-	HANDLE hEvent;
+		// Buffer must exist unlocked.
+		if( !mBuffer )
+			return FALSE;
+
+		if( mLocked )
+			return FALSE;
+
+		// Destination point should be NULL.
+		if( pDest )
+			return FALSE;
+
+		EnterCriticalSection( &mLock );
+		mLocked = true;
+
+		pDest = mBuffer;
+
+		return TRUE;
+	}
+
+	BOOL UnlockPixels()
+	{
+		if( mLocked ) {
+			LeaveCriticalSection( &mLock );
+			mNewFrame = false;
+			mLocked = false;
+			ResetEvent( mEvent );
+
+			return TRUE;
+		}
+
+		return FALSE;
+	}
+
+	BOOL CopyPixels( unsigned char *pDest )
+	{
+		DWORD result = WaitForSingleObject( mEvent, 1000 );
+		if( result != WAIT_OBJECT_0 ) return FALSE;
+
+		// Buffer must exist unlocked.
+		if( !mBuffer )
+			return FALSE;
+
+		if( mLocked )
+			return FALSE;
+
+		// Destination pointer should be non-NULL
+		if( !pDest )
+			return FALSE;
+
+		EnterCriticalSection( &mLock );
+		mLocked = true;
+
+		memcpy( pDest, mBuffer, mBufferSize );
+
+		LeaveCriticalSection( &mLock );
+		mNewFrame = false;
+		mLocked = false;
+		ResetEvent( mEvent );
+
+		return TRUE;
+	}
+
+private:
+	ULONG mFreezeCheck;
+	bool mNewFrame;
+	bool mLocked;
+
+	int mWidth;
+	int mHeight;
+
+	size_t   mBufferSize;
+	uint8_t *mBuffer;
+
+	CRITICAL_SECTION mLock;
+	HANDLE mEvent;
 };
 
 #endif // CINDER_MSW

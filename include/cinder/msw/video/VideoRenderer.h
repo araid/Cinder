@@ -145,7 +145,7 @@ public:
 
 // Manages the SampleGrabber filter.
 class RendererSampleGrabber : public VideoRenderer {
-	//IBaseFilter*            m_pNullRenderer;
+	IBaseFilter*            m_pNullRenderer;
 	IBaseFilter*            m_pGrabberFilter;
 	ISampleGrabber*         m_pGrabber;
 	SampleGrabberCallback*  m_pCallBack;
@@ -158,7 +158,7 @@ public:
 	HRESULT Repaint( HWND hwnd, HDC hdc ) override;
 	HRESULT DisplayModeChanged() override;
 	HRESULT GetNativeVideoSize( LONG *lpWidth, LONG *lpHeight ) const override;
-	BOOL    CheckNewFrame() const override { return TRUE; }
+	BOOL    CheckNewFrame() const override { return m_pCallBack->HasNewFrame(); }
 
 	HRESULT AddToGraph( IGraphBuilder *pGraph, HWND hwnd ) override;
 	HRESULT FinalizeGraph( IGraphBuilder *pGraph ) override;
@@ -169,6 +169,7 @@ public:
 	bool LockSharedTexture( int *pTextureID ) override { throw std::runtime_error( "Not implemented" ); }
 	bool UnlockSharedTexture( int textureID ) override { throw std::runtime_error( "Not implemented" ); }
 
+	SampleGrabberCallback* GetCallback() { return m_pCallBack; }
 };
 
 HRESULT RemoveUnconnectedRenderer( IGraphBuilder *pGraph, IBaseFilter *pRenderer, BOOL *pbRemoved );

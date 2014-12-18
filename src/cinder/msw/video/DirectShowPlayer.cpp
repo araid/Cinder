@@ -127,83 +127,84 @@ HRESULT DirectShowPlayer::HandleEvent( UINT_PTR pEventPtr )
 
 			switch( evCode ) {
 			case EC_COMPLETE:
+				CI_LOG_V( "EC_COMPLETE" );
+				Stop();
+				break;
 			case EC_USERABORT:
+				CI_LOG_V( "EC_USERABORT" );
 				Stop();
 				break;
 			case EC_ERRORABORT:
 				CI_LOG_E( "Playback error." );
-				//Stop();
+				Stop();
 				break;
+
 #if _DEBUG
-			case EC_TIME:
-				CI_LOG_V( "EC_TIME" );
-				break;
-			case EC_REPAINT:
-				CI_LOG_V( "EC_REPAINT" );
-				break;
-			case EC_STREAM_ERROR_STOPPED:
-				CI_LOG_V( "EC_STREAM_ERROR_STOPPED" );
-				break;
-			case EC_STREAM_ERROR_STILLPLAYING:
-				CI_LOG_V( "EC_STREAM_ERROR_STILLPLAYING" );
-				break;
-			case EC_ERROR_STILLPLAYING:
-				CI_LOG_V( "EC_ERROR_STILLPLAYING" );
-				break;
-			case EC_PALETTE_CHANGED:
-				CI_LOG_V( "EC_PALETTE_CHANGED" );
-				break;
-			case EC_VIDEO_SIZE_CHANGED:
-				CI_LOG_V( "EC_VIDEO_SIZE_CHANGED" );
-				break;
-			case EC_QUALITY_CHANGE:
-				CI_LOG_V( "EC_QUALITY_CHANGE" );
-				break;
-			case EC_SHUTTING_DOWN:
-				CI_LOG_V( "EC_SHUTTING_DOWN" );
-				break;
-			case EC_CLOCK_CHANGED:
-				CI_LOG_V( "EC_CLOCK_CHANGED" );
-				break;
-			case EC_PAUSED:
-				CI_LOG_V( "EC_PAUSED" );
-				break;
-			case EC_OPENING_FILE:
-				CI_LOG_V( "EC_OPENING_FILE" );
-				break;
-			case EC_BUFFERING_DATA:
-				CI_LOG_V( "EC_BUFFERING_DATA" );
-				break;
-			case EC_FULLSCREEN_LOST:
-				CI_LOG_V( "EC_FULLSCREEN_LOST" );
-				break;
-			case EC_ACTIVATE:
-				CI_LOG_V( "EC_ACTIVATE" );
-				break;
-			case EC_WINDOW_DESTROYED:
-				CI_LOG_V( "EC_WINDOW_DESTROYED" );
-				break;
-			case EC_DISPLAY_CHANGED:
-				CI_LOG_V( "EC_DISPLAY_CHANGED" );
-				break;
-			case EC_STARVATION:
-				CI_LOG_V( "EC_STARVATION" );
-				break;
-			case EC_OLE_EVENT:
-				CI_LOG_V( "EC_OLE_EVENT" );
-				break;
-			case EC_NOTIFY_WINDOW:
-				CI_LOG_V( "EC_NOTIFY_WINDOW" );
-				break;
-			case EC_STREAM_CONTROL_STOPPED:
-				CI_LOG_V( "EC_STREAM_CONTROL_STOPPED" );
-				break;
-			case EC_STREAM_CONTROL_STARTED:
-				CI_LOG_V( "EC_STREAM_CONTROL_STARTED" );
-				break;
-			case EC_LOADSTATUS:
-				CI_LOG_V( "EC_LOADSTATUS" );
-				break;
+#define EVENT_CASE(name) case name: CI_LOG_V(#name); break
+				EVENT_CASE( EC_ACTIVATE );
+				EVENT_CASE( EC_BANDWIDTHCHANGE );
+				EVENT_CASE( EC_BUFFERING_DATA );
+				EVENT_CASE( EC_BUILT );
+				EVENT_CASE( EC_CLOCK_CHANGED );
+				EVENT_CASE( EC_CLOCK_UNSET );
+				EVENT_CASE( EC_CODECAPI_EVENT );
+				//EVENT_CASE( EC_COMPLETE );
+				EVENT_CASE( EC_CONTENTPROPERTY_CHANGED );
+				EVENT_CASE( EC_DEVICE_LOST );
+				EVENT_CASE( EC_DISPLAY_CHANGED );
+				EVENT_CASE( EC_END_OF_SEGMENT );
+				EVENT_CASE( EC_EOS_SOON );
+				EVENT_CASE( EC_ERROR_STILLPLAYING );
+				//EVENT_CASE( EC_ERRORABORT );
+				EVENT_CASE( EC_ERRORABORTEX );
+				EVENT_CASE( EC_EXTDEVICE_MODE_CHANGE );
+				EVENT_CASE( EC_FILE_CLOSED );
+				EVENT_CASE( EC_FULLSCREEN_LOST );
+				EVENT_CASE( EC_GRAPH_CHANGED );
+				EVENT_CASE( EC_LENGTH_CHANGED );
+				EVENT_CASE( EC_LOADSTATUS );
+				EVENT_CASE( EC_MARKER_HIT );
+				EVENT_CASE( EC_NEED_RESTART );
+				EVENT_CASE( EC_NEW_PIN );
+				EVENT_CASE( EC_NOTIFY_WINDOW );
+				EVENT_CASE( EC_OLE_EVENT );
+				EVENT_CASE( EC_OPENING_FILE );
+				EVENT_CASE( EC_PALETTE_CHANGED );
+				EVENT_CASE( EC_PAUSED );
+				EVENT_CASE( EC_PLEASE_REOPEN );
+				EVENT_CASE( EC_PREPROCESS_COMPLETE );
+				EVENT_CASE( EC_PROCESSING_LATENCY );
+				EVENT_CASE( EC_QUALITY_CHANGE );
+				//EVENT_CASE( EC_RENDER_FINISHED );
+				EVENT_CASE( EC_REPAINT );
+				EVENT_CASE( EC_SAMPLE_LATENCY );
+				//EVENT_CASE( EC_SAMPLE_NEEDED );
+				EVENT_CASE( EC_SCRUB_TIME );
+				EVENT_CASE( EC_SEGMENT_STARTED );
+				EVENT_CASE( EC_SHUTTING_DOWN );
+				EVENT_CASE( EC_SKIP_FRAMES );
+				EVENT_CASE( EC_SNDDEV_IN_ERROR );
+				EVENT_CASE( EC_SNDDEV_OUT_ERROR );
+				EVENT_CASE( EC_STARVATION );
+				EVENT_CASE( EC_STATE_CHANGE );
+				EVENT_CASE( EC_STATUS );
+				EVENT_CASE( EC_STEP_COMPLETE );
+				EVENT_CASE( EC_STREAM_CONTROL_STARTED );
+				EVENT_CASE( EC_STREAM_CONTROL_STOPPED );
+				EVENT_CASE( EC_STREAM_ERROR_STILLPLAYING );
+				EVENT_CASE( EC_STREAM_ERROR_STOPPED );
+				EVENT_CASE( EC_TIMECODE_AVAILABLE );
+				EVENT_CASE( EC_UNBUILT );
+				//EVENT_CASE( EC_USERABORT );
+				EVENT_CASE( EC_VIDEO_SIZE_CHANGED );
+				EVENT_CASE( EC_VIDEOFRAMEREADY );
+				EVENT_CASE( EC_VMR_RENDERDEVICE_SET );
+				EVENT_CASE( EC_VMR_SURFACE_FLIPPED );
+				EVENT_CASE( EC_VMR_RECONNECTION_FAILED );
+				EVENT_CASE( EC_WINDOW_DESTROYED );
+				EVENT_CASE( EC_WMT_EVENT );
+				EVENT_CASE( EC_WMT_INDEX_EVENT );
+#undef EVENT_CASE
 #endif
 			}
 
@@ -424,10 +425,10 @@ HRESULT DirectShowPlayer::RenderStreams( IBaseFilter *pSource )
 		// Loop through all the pins
 		IPin *pPin;
 		while( S_OK == pEnum->Next( 1, &pPin, NULL ) ) {
-			// Try to connect this pin. It's OK if we fail.
-			HRESULT hr2 = m_pVideo->ConnectFilters( pGraph2, pPin );
+			// First allow the video to connect this pin. It's OK if we fail.
+			HRESULT hr2 = m_pVideo->ConnectFilters( m_pGraph, pPin );
 
-			// Try to render this pin.
+			// Next, allow the graph to connect this pin. It's OK if we fail.
 			if( FAILED( hr2 ) )
 				hr2 = pGraph2->RenderEx( pPin, AM_RENDEREX_RENDERTOEXISTINGRENDERERS, NULL );
 

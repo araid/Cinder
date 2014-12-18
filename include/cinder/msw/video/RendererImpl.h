@@ -216,10 +216,20 @@ public:
 
 	~MovieSurface();
 
-	void draw( float x = 0, float y = 0 ) {}
+	const ci::Surface& getSurface() const;
+
+	void draw( float x = 0, float y = 0 )
+	{
+		auto texture = gl::Texture2d::create( getSurface() );
+		texture->setTopDown( true );
+		gl::draw( texture, ci::vec2( x, y ) );
+	}
+
 private:
 	void init( const std::wstring& url );
 
+private:
+	mutable ci::Surface8u mSurface;
 };
 
 } // namespace video

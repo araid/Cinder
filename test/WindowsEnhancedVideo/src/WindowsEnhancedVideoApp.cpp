@@ -9,9 +9,6 @@
 #include "cinder/msw/video/RendererGlImpl.h"
 #include "cinder/gl/Query.h"
 
-#define MOVIE    video::MovieSurface
-#define MOVIEREF video::MovieSurfaceRef
-
 using namespace ci;
 using namespace ci::app;
 using namespace ci::msw;
@@ -34,16 +31,23 @@ public:
 
 	bool playVideo( const fs::path &path );
 private:
-	MOVIEREF        mMovieRef;
-	glm::mat4                mTransform;
+	bool                     mUseMovieGl;
 
+	video::MovieSurfaceRef   mMovieSurface;
+	video::MovieGlRef        mMovieGl;
+
+	glm::mat4                mTransform;
 	gl::QueryTimeSwappedRef  mQuery;
+
+	fs::path                 mPath;
 };
 
 void WindowsEnhancedVideoApp::prepareSettings( Settings* settings )
 {
 	settings->disableFrameRate();
 	settings->setWindowSize( 1920, 1080 );
+
+	mUseMovieGl = true;
 }
 
 void WindowsEnhancedVideoApp::setup()
@@ -60,7 +64,9 @@ void WindowsEnhancedVideoApp::setup()
 
 void WindowsEnhancedVideoApp::shutdown()
 {
-	mMovieRef.reset();
+	// Do we still need to explicitely destroy these?
+	mMovieSurface.reset();
+	mMovieGl.reset();
 }
 
 void WindowsEnhancedVideoApp::update()
@@ -69,11 +75,18 @@ void WindowsEnhancedVideoApp::update()
 
 void WindowsEnhancedVideoApp::draw()
 {
-	if( mMovieRef && mMovieRef->checkNewFrame() ) {
+	if( mMovieGl && mMovieGl->checkNewFrame() ) {
 		gl::clear();
 
 		mQuery->begin();
-		mMovieRef->draw( 0, 0 );
+		mMovieGl->draw( 0, 0 );
+		mQuery->end();
+	}
+	else if( mMovieSurface && mMovieSurface->checkNewFrame() ) {
+		gl::clear();
+
+		mQuery->begin();
+		mMovieSurface->draw( 0, 0 );
 		mQuery->end();
 	}
 }
@@ -89,30 +102,44 @@ void WindowsEnhancedVideoApp::keyDown( KeyEvent event )
 		quit();
 		break;
 	case KeyEvent::KEY_DELETE:
-		mMovieRef.reset();
+		mMovieGl.reset();
+		mMovieSurface.reset();
 		break;
-		/*case KeyEvent::KEY_l:
-			if( mMovieRef ) {
-			mMovieRef->setLoop( !mMovieRef->isLooping() );
-			CI_LOG_I( "Looping set to: " << mPlayerRef->isLooping() );
-			}
-			break;*/
 	case KeyEvent::KEY_SPACE:
-		if( mMovieRef->isPlaying() )
-			mMovieRef->stop();
-		else mMovieRef->play();
+		if( mMovieGl ) {
+			if( mMovieGl->isPlaying() )
+				mMovieGl->stop();
+			else mMovieGl->play();
+		}
+		if( mMovieSurface ) {
+			if( mMovieSurface->isPlaying() )
+				mMovieSurface->stop();
+			else mMovieSurface->play();
+		}
+		break;
+	case KeyEvent::KEY_F1:
+		if( !mUseMovieGl && !mPath.empty() ) {
+			mUseMovieGl = true;
+			mMovieSurface.reset();
+			playVideo( mPath );
+		}
+		break;
+	case KeyEvent::KEY_F2:
+		if( mUseMovieGl && !mPath.empty() ) {
+			mUseMovieGl = false;
+			mMovieGl.reset();
+			playVideo( mPath );
+		}
 		break;
 	}
 }
 
 void WindowsEnhancedVideoApp::resize()
 {
-	if( mMovieRef ) {
-		Area bounds = mMovieRef->getBounds();
-		Area scaled = Area::proportionalFit( bounds, getWindowBounds(), true, true );
-		mTransform = glm::translate( vec3( vec2( scaled.getUL() - bounds.getUL() ) + vec2( 0.5 ), 0 ) ) * glm::scale( vec3( vec2( scaled.getSize() ) / vec2( bounds.getSize() ), 1 ) );
-		gl::setModelMatrix( mTransform );
-	}
+	Area bounds = mMovieGl ? mMovieGl->getBounds() : mMovieSurface ? mMovieSurface->getBounds() : getWindowBounds();
+	Area scaled = Area::proportionalFit( bounds, getWindowBounds(), true, true );
+	mTransform = glm::translate( vec3( vec2( scaled.getUL() - bounds.getUL() ) + vec2( 0.5 ), 0 ) ) * glm::scale( vec3( vec2( scaled.getSize() ) / vec2( bounds.getSize() ), 1 ) );
+	gl::setModelMatrix( mTransform );
 }
 
 void WindowsEnhancedVideoApp::fileDrop( FileDropEvent event )
@@ -125,17 +152,31 @@ bool WindowsEnhancedVideoApp::playVideo( const fs::path &path )
 {
 	if( !path.empty() && fs::exists( path ) ) {
 		// TODO: make sure the movie can play
-		mMovieRef = MOVIE::create( path );
-		mMovieRef->play();
+		if( mUseMovieGl ) {
+			mMovieGl = video::MovieGl::create( path );
+			mMovieGl->play();
+		}
+		else {
+			mMovieSurface = video::MovieSurface::create( path );
+			mMovieSurface->play();
+		}
 
-		Area bounds = Area::proportionalFit( mMovieRef->getBounds(), getDisplay()->getBounds(), true, false );
-		getWindow()->setSize( bounds.getSize() );
-		getWindow()->setPos( bounds.getUL() );
+		mPath = path;
+
+		Area bounds = mMovieGl ? mMovieGl->getBounds() : mMovieSurface ? mMovieSurface->getBounds() : getWindowBounds();
+		Area proportional = Area::proportionalFit( bounds, getDisplay()->getBounds(), true, false );
+		getWindow()->setSize( proportional.getSize() );
+		getWindow()->setPos( proportional.getUL() );
 
 		std::string title = "WindowsEnhancedVideo";
-		if( mMovieRef->isUsingDirectShow() )
+		if( mUseMovieGl )
+			title += " (MovieGl)";
+		else
+			title += " (MovieSurface)";
+
+		if( ( mMovieGl && mMovieGl->isUsingDirectShow() ) || ( mMovieSurface && mMovieSurface->isUsingDirectShow() ) )
 			title += " (DirectShow)";
-		else if( mMovieRef->isUsingMediaFoundation() )
+		else
 			title += " (Media Foundation)";
 
 		getWindow()->setTitle( title );

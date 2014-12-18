@@ -274,6 +274,20 @@ void MovieSurface::init( const std::wstring& url )
 	mHeight = mPlayer->GetHeight();
 }
 
+const Surface& MovieSurface::getSurface() const
+{
+	RendererSampleGrabber* pGrabber = dynamic_cast<RendererSampleGrabber*>( mRenderer );
+
+	if( pGrabber && pGrabber->CheckNewFrame() ) {
+		mSurface = Surface( mWidth, mHeight, false, SurfaceChannelOrder::BGR );
+
+		if( pGrabber->GetCallback()->CopyPixels( mSurface.getData() ) ) {
+		}
+	}
+
+	return mSurface;
+}
+
 } // namespace video
 } // namespace msw
 } // namespace cinder

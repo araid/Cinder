@@ -448,19 +448,18 @@ HRESULT RendererEVR::GetNativeVideoSize( LONG *lpWidth, LONG *lpHeight ) const
 /// RendererSampleGrabber
 
 RendererSampleGrabber::RendererSampleGrabber()
-	: m_pGrabberFilter( NULL ), m_pGrabber( NULL )
+	: m_pGrabberFilter( NULL ), m_pGrabber( NULL ), m_pNullRenderer( NULL )
 {
 	m_pCallBack = new SampleGrabberCallback();
-	m_pCallBack->newFrame = false;
 }
 
 RendererSampleGrabber::~RendererSampleGrabber()
 {
-	//SafeRelease( m_pNullRenderer );
+	SafeRelease( m_pNullRenderer );
 	SafeRelease( m_pGrabber );
 	SafeRelease( m_pGrabberFilter );
 
-	SafeRelease( m_pCallBack );
+	SafeDelete( m_pCallBack );
 }
 
 BOOL RendererSampleGrabber::HasVideo() const
@@ -471,6 +470,10 @@ BOOL RendererSampleGrabber::HasVideo() const
 HRESULT RendererSampleGrabber::AddToGraph( IGraphBuilder *pGraph, HWND hwnd )
 {
 	HRESULT hr = S_OK;
+
+	SafeRelease( m_pNullRenderer );
+	SafeRelease( m_pGrabber );
+	SafeRelease( m_pGrabberFilter );
 
 	do {
 		ScopedComPtr<IBaseFilter> pGrabberFilter;
@@ -497,7 +500,7 @@ HRESULT RendererSampleGrabber::AddToGraph( IGraphBuilder *pGraph, HWND hwnd )
 		hr = pGrabber->SetOneShot( FALSE );
 		hr = pGrabber->SetBufferSamples( TRUE );
 
-		//hr = pGrabber->SetCallback( m_pCallBack, 0 );
+		hr = pGrabber->SetCallback( m_pCallBack, 0 );
 		BREAK_ON_FAIL( hr );
 
 		// Add null renderer
@@ -507,6 +510,7 @@ HRESULT RendererSampleGrabber::AddToGraph( IGraphBuilder *pGraph, HWND hwnd )
 		BREAK_ON_FAIL( hr );
 
 		// If everything worked out, we're ready to take ownership of the pointers.
+		m_pNullRenderer = pNullRenderer.Detach();
 		m_pGrabberFilter = pGrabberFilter.Detach();
 		m_pGrabber = pGrabber.Detach();
 	} while( false );
@@ -521,12 +525,12 @@ HRESULT RendererSampleGrabber::FinalizeGraph( IGraphBuilder *pGraph )
 	}
 
 	BOOL bRemoved;
-	//HRESULT hr = RemoveUnconnectedRenderer( pGraph, m_pNullRenderer, &bRemoved );
-	//if( bRemoved ) {
-	//	SafeRelease( m_pNullRenderer );
-	//}
+	HRESULT hr = RemoveUnconnectedRenderer( pGraph, m_pNullRenderer, &bRemoved );
+	if( bRemoved ) {
+		SafeRelease( m_pNullRenderer );
+	}
 
-	HRESULT hr = RemoveUnconnectedRenderer( pGraph, m_pGrabberFilter, &bRemoved );
+	hr = RemoveUnconnectedRenderer( pGraph, m_pGrabberFilter, &bRemoved );
 	if( bRemoved ) {
 		SafeRelease( m_pGrabber );
 		SafeRelease( m_pGrabberFilter );
@@ -537,10 +541,22 @@ HRESULT RendererSampleGrabber::FinalizeGraph( IGraphBuilder *pGraph )
 
 HRESULT RendererSampleGrabber::ConnectFilters( IGraphBuilder *pGraph, IPin *pPin )
 {
-	if( m_pGrabberFilter == NULL )
-		return E_POINTER;
+	HRESULT hr = S_OK;
 
-	return video::ConnectFilters( pGraph, pPin, m_pGrabberFilter );
+	do {
+		BREAK_ON_NULL( m_pGrabberFilter, E_POINTER );
+		BREAK_ON_NULL( m_pNullRenderer, E_POINTER );
+
+		// Connect source to Sample Grabber
+		hr = video::ConnectFilters( pGraph, pPin, m_pGrabberFilter );
+		BREAK_ON_FAIL( hr );
+
+		// Connect sample grabber to null renderer
+		hr = video::ConnectFilters( pGraph, m_pGrabberFilter, m_pNullRenderer );
+		BREAK_ON_FAIL( hr );
+	} while( false );
+
+	return hr;
 }
 
 HRESULT RendererSampleGrabber::UpdateVideoWindow( HWND hwnd, const LPRECT prc )
@@ -580,8 +596,7 @@ HRESULT RendererSampleGrabber::GetNativeVideoSize( LONG *lpWidth, LONG *lpHeight
 				*lpHeight = pHeader->bmiHeader.biHeight;
 
 				// Use this opportunity to setup the grabber buffer.
-				int numBytesIn = *lpWidth * *lpHeight * 3; // RGB
-				m_pCallBack->setupBuffer( numBytesIn );
+				m_pCallBack->SetupBuffer( *lpWidth, *lpHeight, 3 ); // RGB
 				break;
 			}
 		}
