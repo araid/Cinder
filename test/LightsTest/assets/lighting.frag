@@ -112,7 +112,7 @@ float calcScattering( vec3 vertPos, vec3 lightPos )
 	
 	float b = dot( normalize( r ), q );
 	float c = dot( q, q );
-	float d = -r.z; // length( r );
+	float d = length( r );
 	
 	// Evaluate integral.
 	float s = inversesqrt( max( 0.0001, c - b * b ) );	

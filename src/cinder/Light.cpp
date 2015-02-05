@@ -150,6 +150,7 @@ Light::Data CapsuleLight::getData( double time, const mat4 &transform ) const
 
 	// Populate the LightData structure.
 	Light::Data params = PointLight::getData( time, transform );
+	params.position = vec3( transform * vec4( position, 1 ) );
 	params.horizontal = glm::normalize( mat3( transform ) * mAxis );
 	params.width = mLength;
 
