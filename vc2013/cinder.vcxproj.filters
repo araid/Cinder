@@ -136,11 +136,11 @@
     <Filter Include="Source Files\glload">
       <UniqueIdentifier>{989dc751-89fb-4b63-adb6-f745dd03ccb9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\evr">
-      <UniqueIdentifier>{f2d3fa94-d4be-4123-8c85-9419b551cddc}</UniqueIdentifier>
+    <Filter Include="Header Files\msw\video">
+      <UniqueIdentifier>{8bd96a27-092b-4f08-90dc-e180cee8ced8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\evr">
-      <UniqueIdentifier>{dccbcfd9-492c-40f6-80d4-c5aa1fbea7bb}</UniqueIdentifier>
+    <Filter Include="Source Files\msw\video">
+      <UniqueIdentifier>{b1569de2-1dde-4b34-81d2-d5eddc1b8d7a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -747,26 +747,26 @@
     <ClCompile Include="..\src\jsoncpp\jsoncpp.cpp">
       <Filter>Source Files\jsoncpp</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\cinder\evr\RendererGlImpl.cpp">
-      <Filter>Source Files\evr</Filter>
+    <ClCompile Include="..\src\cinder\msw\video\DirectShowPlayer.cpp">
+      <Filter>Source Files\msw\video</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\cinder\evr\DirectShowVideo.cpp">
-      <Filter>Source Files\evr</Filter>
+    <ClCompile Include="..\src\cinder\msw\video\DirectShowVideo.cpp">
+      <Filter>Source Files\msw\video</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\cinder\evr\DirectShowPlayer.cpp">
-      <Filter>Source Files\evr</Filter>
+    <ClCompile Include="..\src\cinder\msw\video\MediaFoundationPlayer.cpp">
+      <Filter>Source Files\msw\video</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\cinder\evr\MediaFoundationPlayer.cpp">
-      <Filter>Source Files\evr</Filter>
+    <ClCompile Include="..\src\cinder\msw\video\MediaFoundationVideo.cpp">
+      <Filter>Source Files\msw\video</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\cinder\evr\MediaFoundationVideo.cpp">
-      <Filter>Source Files\evr</Filter>
+    <ClCompile Include="..\src\cinder\msw\video\RendererGlImpl.cpp">
+      <Filter>Source Files\msw\video</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\cinder\evr\RendererImpl.cpp">
-      <Filter>Source Files\evr</Filter>
+    <ClCompile Include="..\src\cinder\msw\video\RendererImpl.cpp">
+      <Filter>Source Files\msw\video</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\cinder\evr\SharedTexture.cpp">
-      <Filter>Source Files\evr</Filter>
+    <ClCompile Include="..\src\cinder\msw\video\SharedTexture.cpp">
+      <Filter>Source Files\msw\video</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1592,35 +1592,38 @@
     <ClInclude Include="..\include\jsoncpp\json\json-forwards.h">
       <Filter>Header Files\json</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\cinder\evr\RendererImpl.h">
-      <Filter>Header Files\evr</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\cinder\evr\RendererGlImpl.h">
-      <Filter>Header Files\evr</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\cinder\msw\CinderMswCom.h">
       <Filter>Header Files\msw</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\cinder\evr\DirectShowVideo.h">
-      <Filter>Header Files\evr</Filter>
+    <ClInclude Include="..\include\cinder\msw\video\SharedTexture.h">
+      <Filter>Header Files\msw\video</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\cinder\evr\DirectShowPlayer.h">
-      <Filter>Header Files\evr</Filter>
+    <ClInclude Include="..\include\cinder\msw\video\DirectShowPlayer.h">
+      <Filter>Header Files\msw\video</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\cinder\evr\MediaFoundationPlayer.h">
-      <Filter>Header Files\evr</Filter>
+    <ClInclude Include="..\include\cinder\msw\video\DirectShowVideo.h">
+      <Filter>Header Files\msw\video</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\cinder\evr\MediaFoundationFramework.h">
-      <Filter>Header Files\evr</Filter>
+    <ClInclude Include="..\include\cinder\msw\video\IPlayer.h">
+      <Filter>Header Files\msw\video</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\cinder\evr\IPlayer.h">
-      <Filter>Header Files\evr</Filter>
+    <ClInclude Include="..\include\cinder\msw\video\MediaFoundationFramework.h">
+      <Filter>Header Files\msw\video</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\cinder\evr\MediaFoundationVideo.h">
-      <Filter>Header Files\evr</Filter>
+    <ClInclude Include="..\include\cinder\msw\video\MediaFoundationPlayer.h">
+      <Filter>Header Files\msw\video</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\cinder\evr\SharedTexture.h">
-      <Filter>Header Files\evr</Filter>
+    <ClInclude Include="..\include\cinder\msw\video\MediaFoundationVideo.h">
+      <Filter>Header Files\msw\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\cinder\msw\video\RendererGlImpl.h">
+      <Filter>Header Files\msw\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\cinder\msw\video\RendererImpl.h">
+      <Filter>Header Files\msw\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\cinder\msw\video\SampleGrabber.h">
+      <Filter>Header Files\msw\video</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
