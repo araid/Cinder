@@ -23,6 +23,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
+#include "cinder/Area.h"
 #include "cinder/Color.h"
 #include "cinder/Matrix.h"
 #include "cinder/Quaternion.h"
@@ -92,6 +93,9 @@ typedef std::shared_ptr<class Light> LightRef;
 
 class Light {
 public:
+	//! Shadow bias matrix used to easily convert to shadow map coordinates.
+	static const mat4  sBiasMatrix;
+
 	//! Note: values are used as bitmask in shader and should also be sortable!!
 	typedef enum Type { Directional = 0x0, Point = 0x1, Capsule = 0x2, Spot = 0x4, Wedge = 0x8 };
 
@@ -100,14 +104,14 @@ public:
 		Data()
 			: intensity( 1 ), direction( 0, -1, 0 ), range( 100 ), width( 0 ), height( 0 ), color( 1 ), angle( 1 ) {}
 
-		vec3   position;
-		float  intensity;
+		vec3   position;            // 
+		float  intensity;           // 
 		vec3   direction;			// normalized
-		float  range;
+		float  range;               //
 		vec3   horizontal;			// normalized direction of horizontal size (linear and area lights)
-		float  width;
+		float  width;               //
 		vec3   vertical;			// normalized direction of vertical size (area lights)
-		float  height;
+		float  height;              //
 		vec4   color;				// x = red, y = green, z = blue, w = luminance
 		vec2   attenuation;			// x = linear coefficient, y = quadratic coefficient
 		vec2   angle;				// x = cos(outer angle), y = cos(inner angle)
@@ -115,8 +119,9 @@ public:
 		mat4   modulationMatrix;	// converts to modulation map space
 		int    shadowIndex;			// index into an array of shadow samplers
 		int    modulationIndex;		// index into an array of texture samplers
-		int    flags;				// 0-3 = light type, 4 = modulation enabled, 5 = shadow enabled
+		int    flags;				// bits 0-3 = light type, bit 4 = modulation enabled, bit 5 = shadow enabled
 		int    reserved;
+		vec4   mapping;             // xy = offset, zw = size (can be used to remap coordinates)
 
 		enum Flags { ModulationEnabled = 0x10, ShadowEnabled = 0x020 };
 	};
@@ -180,18 +185,32 @@ public:
 	//! Returns TRUE if the light is modulated by a texture.
 	bool hasModulation() const { return ( mFlags & Data::ModulationEnabled ) > 0; }
 
+	//! Returns the normalized mapping coordinates for this light.
+	const vec4& getMapping() const { return mMapping; }
+	//! Returns the mapping coordinates for this light, given the \a full resolution of the map.
+	Area getMapping(const Area& full) const {
+		return Area( ivec2( mMapping.x * full.getWidth(), mMapping.y * full.getHeight() ),
+					 ivec2( ( mMapping.x + mMapping.z ) * full.getWidth(), ( mMapping.y + mMapping.w )* full.getHeight() ) );
+
+	}
+	//! Assigns a smaller portion of a larger map to be used by this light. Can be used to remap texture coordinates. 
+	void setMapping( const Area& assigned, const Area& full )
+	{
+		mMapping = vec4( assigned.x1 / float( full.getWidth() ),
+						 assigned.y1 / float( full.getHeight() ),
+						 assigned.getWidth() / float( full.getWidth() ),
+						 assigned.getHeight() / float( full.getHeight() )
+						 );
+	}
+	//! Assigns a smaller portion of a larger map to be used by this light. Can be used to remap texture coordinates. Parameters \a x, \a y, \a width and \a height should be specified in normalized coordinates.
+	void setMapping( float x, float y, float width, float height ) { mMapping = vec4( x, y, width, height ); }
+
 	//! Comparator for the std::sort function.
 	bool operator<( const Light& rhs ) const { return (int) mType < (int) rhs.mType; }
 
 protected:
 	Light( Type type )
-		: mType( type )
-		, mIntensity( 1 )
-		, mColor( 1, 1, 1 )
-		, mFlags( type )
-		, mVisible( true )
-	{
-	}
+		: mType( type ), mIntensity( 1 ), mColor( 1, 1, 1 ), mFlags( type ), mVisible( true ), mMapping( 0, 0, 1, 1 ) {}
 
 	static bool calcRange( float intensity, const vec2 &attenuation, float *range, float threshold );
 	static bool calcIntensity( float range, const vec2 &attenuation, float *intensity, float threshold );
@@ -204,6 +223,7 @@ private:
 
 protected:
 	Color      mColor;
+	vec4       mMapping;
 	float      mIntensity;
 	int        mFlags;
 	bool       mVisible;
@@ -536,8 +556,6 @@ protected:
 	mutable mat4       mViewMatrix;;
 	mutable mat4       mProjectionMatrix;
 	mutable mat4       mShadowMatrix;
-
-	static const mat4  sBiasMatrix;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////

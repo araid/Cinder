@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2014, The Cinder Project, All rights reserved.
+Copyright (c) 2015, The Cinder Project, All rights reserved.
 
 This code is intended for use with the Cinder C++ library: http://libcinder.org
 
@@ -21,17 +21,15 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
-//#include "cinder/app/AppBasic.h"
-//#include "cinder/gl/gl.h"
 #include "cinder/Light.h"
 #include "cinder/Log.h"
 
 namespace cinder {
 
-const mat4 SpotLight::sBiasMatrix = mat4( 0.5f, 0.0f, 0.0f, 0.0f,
-										  0.0f, 0.5f, 0.0f, 0.0f,
-										  0.0f, 0.0f, 0.5f, 0.0f,
-										  0.5f, 0.5f, 0.5f, 1.0f );
+const mat4 Light::sBiasMatrix = mat4( 0.5f, 0.0f, 0.0f, 0.0f,
+									  0.0f, 0.5f, 0.0f, 0.0f,
+									  0.0f, 0.0f, 0.5f, 0.0f,
+									  0.5f, 0.5f, 0.5f, 1.0f );
 
 Light::Data Light::getData( double time, const mat4 &transform ) const
 {
@@ -43,6 +41,7 @@ Light::Data Light::getData( double time, const mat4 &transform ) const
 	params.color = vec4( mColor[0], mColor[1], mColor[2], mColor.dot( luminance ) );
 	params.intensity = mIntensity;
 	params.flags = mFlags | ( mType & 0xF );
+	params.mapping = mMapping;
 
 	return params;
 }

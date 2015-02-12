@@ -19,6 +19,7 @@ struct LightData
 	int   modulationIndex;
 	int   flags;
 	int   reserved;
+	vec4  mapping;
 };
 
 layout (std140) uniform uLights

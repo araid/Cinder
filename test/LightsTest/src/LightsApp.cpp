@@ -217,7 +217,7 @@ void LightsApp::setup()
 	point->setPosition( vec3( 0, 10, 0 ) );
 	point->setAttenuation( 0, 0.01f );
 	point->setIntensity( 1.5f );
-	point->setColorTemperature( 3000.0f ); // Color::hex( 0xE68800 ) );
+	point->setColorTemperature( 3000.0f );
 	point->setModulationIndex( 1 );
 	point->calcRange();
 
@@ -258,7 +258,7 @@ void LightsApp::setup()
 	mSketch = gl::Sketch::create( false );
 
 	mAnimateObject = true;
-	mAnimateLights = false;
+	mAnimateLights = true;
 	mDebugDraw = false;
 	mHardLights = false;
 }
@@ -455,8 +455,8 @@ void LightsApp::keyDown( KeyEvent event )
 		break;
 	case KeyEvent::KEY_c:
 		// Colorize lights.
-		spot->setColor( Color::hex( 0xE68800 ) );
-		point->setColor( Color::hex( 0x7800CE ) );
+		spot->setColor( Color::hex( 0x7800CE ) );
+		point->setColorTemperature( 3000.0f );
 		capsule->setColor( Color::hex( 0xFF004F ) );
 		wedge->setColor( Color::hex( 0x00AC6B ) );
 		directional->setColor( Color::hex( 0x004D95 ) );
@@ -529,6 +529,15 @@ void LightsApp::keyDown( KeyEvent event )
 		catch( const std::exception &e ) {
 			console() << e.what() << std::endl;
 		}
+		break;
+	case KeyEvent::KEY_ESCAPE:
+		if( isFullScreen() )
+			setFullScreen( false );
+		else
+			quit();
+		break;
+	case KeyEvent::KEY_f:
+		setFullScreen( !isFullScreen() );
 		break;
 	}
 }
